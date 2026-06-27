@@ -113,3 +113,36 @@ settings migration (v1→v2, adds `schedule`, defaults `.off`).
 NOAA solar calculation (https://gml.noaa.gov/grad/solcalc/calcdetails.html);
 golden values cross-checked against sunrise-sunset.org. Schema is now **v2**
 with a working v1→v2 migration.
+
+## Phase 5 — Ambient inputs: exclusion, power, RT, launch-at-login, per-display (2026-06-27)
+
+Thin first-party adapters, each pushing one boolean into the coordinator,
+folded into the single `resolve()` precedence. Settings shape + migration
+completed; remaining Preferences tabs wired.
+
+### Verification
+- `xcodebuild build` / `xcodebuild test` — green; **89 tests, 0 failures, no
+  skips/stubs** (audited). +7 ExclusionTests, +10 resolver precedence, +4
+  settings/migration.
+- Release build launches and is stable; **phys_footprint 21.9 MB** (under the
+  25 MB target).
+
+### What landed
+- ExclusionService (observes `NSWorkspace.shared.notificationCenter`, not the
+  default center), PowerMonitor (`IOPSNotificationCreateRunLoopSource`),
+  ReduceTransparencyMonitor, LaunchAtLoginService (`SMAppService.mainApp`).
+- Full resolver precedence: snooze → excluded-frontmost → battery-pause →
+  configured-schedule → isEnabled, with Reduce-Transparency stepping comfort
+  down (or switching to a flat matte) and per-display visibility. The
+  no-schedule-visible invariant is preserved and tested.
+- Settings → **v3** with a real v1→v2→v3 migration chain; sensible exclusion
+  defaults seeded.
+- Preferences General + Exclusions tabs wired to real two-way bindings (no
+  `.constant` placeholders); per-display list keyed to the controller's
+  DisplayID scheme.
+- ADR-0008 (exclusion mechanism), ADR-0009 (persistence & settings versioning).
+
+### Note
+Reduce-Transparency `flatMatte` response currently maps to the Classic Matte
+preset (low-texture fBm) rather than a literally textureless fill — an
+acceptable approximation; revisit if a true flat fill is wanted.

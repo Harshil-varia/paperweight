@@ -9,6 +9,12 @@ class AppCoordinator: ObservableObject {
     private var scheduler: Scheduler!
     private var snoozeTimer: SnoozeTimer!
 
+    // Phase 5: Ambient input monitors
+    private var exclusionService: ExclusionService?
+    private var powerMonitor: PowerMonitor?
+    private var reduceTransparencyMonitor: ReduceTransparencyMonitor?
+    private var launchAtLoginService: LaunchAtLoginService?
+
     @Published private(set) var resolved: ResolvedOverlay
     @Published var settings: Settings {
         didSet {
@@ -35,11 +41,34 @@ class AppCoordinator: ObservableObject {
         }
     }
 
+    // Phase 5: Ambient input sources
+    var inputExcludedAppFrontmost: Bool = false {
+        didSet {
+            recompute()
+        }
+    }
+
+    var inputOnBattery: Bool = false {
+        didSet {
+            recompute()
+        }
+    }
+
+    var inputReduceTransparency: Bool = false {
+        didSet {
+            recompute()
+        }
+    }
+
     init(
         settingsStore: SettingsStoring = SettingsStore(),
         engine: TextureProviding = TextureEngine(),
         scheduler: Scheduler? = nil,
-        snoozeTimer: SnoozeTimer? = nil
+        snoozeTimer: SnoozeTimer? = nil,
+        exclusionService: ExclusionService? = nil,
+        powerMonitor: PowerMonitor? = nil,
+        reduceTransparencyMonitor: ReduceTransparencyMonitor? = nil,
+        launchAtLoginService: LaunchAtLoginService? = nil
     ) {
         self.settingsStore = settingsStore
         self.engine = engine
@@ -56,6 +85,16 @@ class AppCoordinator: ObservableObject {
         self.scheduler = tempScheduler
         self.snoozeTimer = tempSnoozeTimer
 
+        // Set up ambient monitors
+        let tempExclusionService = exclusionService ?? ExclusionService()
+        let tempPowerMonitor = powerMonitor ?? PowerMonitor()
+        let tempReduceTransparencyMonitor = reduceTransparencyMonitor ?? ReduceTransparencyMonitor()
+        let tempLaunchAtLoginService = launchAtLoginService ?? LaunchAtLoginService()
+        self.exclusionService = tempExclusionService
+        self.powerMonitor = tempPowerMonitor
+        self.reduceTransparencyMonitor = tempReduceTransparencyMonitor
+        self.launchAtLoginService = tempLaunchAtLoginService
+
         // Initialize resolved state from loaded settings
         let profile = loadedSettings.selectedProfile
         let inputs = OverlayInputs(
@@ -64,7 +103,13 @@ class AppCoordinator: ObservableObject {
             comfort: loadedSettings.comfort,
             scheduleConfigured: loadedSettings.schedule != .off,
             scheduleActive: false,
-            snoozedUntil: nil
+            snoozedUntil: nil,
+            excludedAppFrontmost: false,
+            onBattery: false,
+            reduceTransparency: false,
+            pauseOnBattery: loadedSettings.pauseOnBattery,
+            reduceTransparencyResponse: loadedSettings.reduceTransparencyResponse,
+            perDisplay: loadedSettings.perDisplay
         )
         self.resolved = resolve(inputs)
 
@@ -72,8 +117,16 @@ class AppCoordinator: ObservableObject {
         self.scheduler.setCoordinator(self)
         self.snoozeTimer.setCoordinator(self)
 
-        // Start the scheduler
+        // Set coordinator reference on ambient monitors
+        tempExclusionService.coordinator = self
+        tempPowerMonitor.coordinator = self
+        tempReduceTransparencyMonitor.coordinator = self
+
+        // Start the scheduler and monitors
         self.scheduler.start(with: loadedSettings.schedule)
+        tempExclusionService.start()
+        tempPowerMonitor.start()
+        tempReduceTransparencyMonitor.start()
 
         // Observe wake notification to re-arm scheduler
         NotificationCenter.default.addObserver(
@@ -87,6 +140,9 @@ class AppCoordinator: ObservableObject {
     deinit {
         NotificationCenter.default.removeObserver(self)
         scheduler.stop()
+        exclusionService?.stop()
+        powerMonitor?.stop()
+        reduceTransparencyMonitor?.stop()
     }
 
     func recompute() {
@@ -97,7 +153,13 @@ class AppCoordinator: ObservableObject {
             comfort: settings.comfort,
             scheduleConfigured: settings.schedule != .off,
             scheduleActive: inputScheduleActive,
-            snoozedUntil: inputSnoozedUntil
+            snoozedUntil: inputSnoozedUntil,
+            excludedAppFrontmost: inputExcludedAppFrontmost,
+            onBattery: inputOnBattery,
+            reduceTransparency: inputReduceTransparency,
+            pauseOnBattery: settings.pauseOnBattery,
+            reduceTransparencyResponse: settings.reduceTransparencyResponse,
+            perDisplay: settings.perDisplay
         )
         let newResolved = resolve(inputs)
 

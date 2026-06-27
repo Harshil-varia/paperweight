@@ -65,7 +65,7 @@ class SettingsStoreTests: XCTestCase {
 
     // MARK: - Phase 4: Migration tests
 
-    func testMigrationV1toV2AddsSchedule() {
+    func testMigrationV1toV2toV3AddsScheduleThenAmbient() {
         // Manually create and save a v1 settings blob
         var v1Components = Settings(schemaVersion: 1)
         v1Components.isEnabled = true
@@ -83,18 +83,23 @@ class SettingsStoreTests: XCTestCase {
         // Manually insert the v1 blob into UserDefaults
         userDefaults.set(v1Data, forKey: "com.humanlayer.paperweight.settings")
 
-        // Load and verify migration
+        // Load and verify migration (v1 -> v2 -> v3)
         let store = SettingsStore(userDefaults: userDefaults)
         let migrated = store.load()
 
-        XCTAssertEqual(migrated.schemaVersion, 2, "Schema should be bumped to v2")
+        // After migration, schemaVersion should be 3 (v1->v2->v3)
+        XCTAssertEqual(migrated.schemaVersion, 3, "Schema should be bumped to v3")
         XCTAssertEqual(migrated.isEnabled, v1Components.isEnabled, "isEnabled should be preserved")
         XCTAssertEqual(migrated.selectedProfileID, v1Components.selectedProfileID, "selectedProfileID should be preserved")
         XCTAssertEqual(migrated.comfort, v1Components.comfort, "comfort should be preserved")
         XCTAssertEqual(migrated.schedule, .off, "schedule should default to .off in v2")
+        // Verify Phase 5 fields are initialized
+        XCTAssertFalse(migrated.exclusions.isEmpty, "exclusions should be seeded with defaults")
+        XCTAssertFalse(migrated.pauseOnBattery, "pauseOnBattery should default to false")
+        XCTAssertFalse(migrated.launchAtLogin, "launchAtLogin should default to false")
     }
 
-    func testRoundTripV2SettingsWithSchedule() {
+    func testRoundTripV2SettingsWithScheduleMigratestoV3() {
         let store = SettingsStore(userDefaults: userDefaults)
         let original = Settings(
             schemaVersion: 2,
@@ -107,11 +112,14 @@ class SettingsStoreTests: XCTestCase {
         try? store.save(original)
         let loaded = store.load()
 
-        XCTAssertEqual(loaded.schemaVersion, 2)
+        // After loading v2, it should be migrated to v3
+        XCTAssertEqual(loaded.schemaVersion, 3, "v2 should be auto-migrated to v3")
         XCTAssertEqual(loaded.schedule, .manual(fromHour: 9, fromMinute: 0, toHour: 17, toMinute: 0))
+        // Verify Phase 5 fields are initialized
+        XCTAssertFalse(loaded.exclusions.isEmpty, "exclusions should be seeded")
     }
 
-    func testRoundTripV2SettingsWithSolarSchedule() {
+    func testRoundTripV2SettingsWithSolarScheduleMigratestoV3() {
         let store = SettingsStore(userDefaults: userDefaults)
         let original = Settings(
             schemaVersion: 2,
@@ -124,13 +132,138 @@ class SettingsStoreTests: XCTestCase {
         try? store.save(original)
         let loaded = store.load()
 
-        XCTAssertEqual(loaded.schemaVersion, 2)
+        // After loading v2, it should be migrated to v3
+        XCTAssertEqual(loaded.schemaVersion, 3, "v2 should be auto-migrated to v3")
         if case let .solar(lat, long) = loaded.schedule {
             XCTAssertEqualWithAccuracy(lat, 40.7128, accuracy: 0.0001)
             XCTAssertEqualWithAccuracy(long, -74.0060, accuracy: 0.0001)
         } else {
             XCTFail("Expected solar schedule")
         }
+        // Verify Phase 5 fields are initialized
+        XCTAssertFalse(loaded.exclusions.isEmpty, "exclusions should be seeded")
+    }
+
+    // MARK: - Phase 5: v2→v3 Migration Tests
+
+    func testMigrationV2toV3AddsAmbientFields() {
+        // Manually create and save a v2 settings blob without Phase 5 fields
+        var v2Components = Settings(
+            schemaVersion: 2,
+            isEnabled: true,
+            selectedProfileID: "eink-calm",
+            comfort: 0.6,
+            schedule: .manual(fromHour: 9, fromMinute: 0, toHour: 17, toMinute: 0)
+        )
+
+        // Encode as v2
+        let encoder = JSONEncoder()
+        guard let v2Data = try? encoder.encode(v2Components) else {
+            XCTFail("Failed to encode v2 settings")
+            return
+        }
+
+        // Manually insert the v2 blob into UserDefaults
+        userDefaults.set(v2Data, forKey: "com.humanlayer.paperweight.settings")
+
+        // Load and verify migration
+        let store = SettingsStore(userDefaults: userDefaults)
+        let migrated = store.load()
+
+        XCTAssertEqual(migrated.schemaVersion, 3, "Schema should be bumped to v3")
+        XCTAssertEqual(migrated.isEnabled, v2Components.isEnabled, "isEnabled should be preserved")
+        XCTAssertEqual(migrated.selectedProfileID, v2Components.selectedProfileID, "selectedProfileID should be preserved")
+        XCTAssertEqual(migrated.comfort, v2Components.comfort, "comfort should be preserved")
+        XCTAssertEqual(migrated.schedule, v2Components.schedule, "schedule should be preserved")
+
+        // Verify Phase 5 fields are initialized
+        XCTAssertFalse(migrated.exclusions.isEmpty, "exclusions should be seeded with defaults")
+        XCTAssertFalse(migrated.pauseOnBattery, "pauseOnBattery should default to false")
+        XCTAssertFalse(migrated.launchAtLogin, "launchAtLogin should default to false")
+        XCTAssertEqual(migrated.reduceTransparencyResponse, .stepDown, "reduceTransparencyResponse should default to stepDown")
+        XCTAssertEqual(migrated.perDisplay.count, 0, "perDisplay should start empty")
+    }
+
+    func testMigrationV2toV3PreservesExistingExclusions() {
+        // Create a v3 settings blob with custom exclusions
+        var v3Original = Settings(
+            schemaVersion: 3,
+            isEnabled: true,
+            selectedProfileID: "classic-matte",
+            comfort: 0.7,
+            schedule: .off,
+            exclusions: ["com.custom.app", "com.example.tool"],
+            pauseOnBattery: true,
+            launchAtLogin: true,
+            reduceTransparencyResponse: .flatMatte
+        )
+
+        let encoder = JSONEncoder()
+        guard let v3Data = try? encoder.encode(v3Original) else {
+            XCTFail("Failed to encode v3 settings")
+            return
+        }
+
+        userDefaults.set(v3Data, forKey: "com.humanlayer.paperweight.settings")
+
+        let store = SettingsStore(userDefaults: userDefaults)
+        let loaded = store.load()
+
+        XCTAssertEqual(loaded.schemaVersion, 3)
+        XCTAssertTrue(loaded.exclusions.contains("com.custom.app"))
+        XCTAssertTrue(loaded.exclusions.contains("com.example.tool"))
+        XCTAssertTrue(loaded.pauseOnBattery)
+        XCTAssertTrue(loaded.launchAtLogin)
+        XCTAssertEqual(loaded.reduceTransparencyResponse, .flatMatte)
+    }
+
+    func testRoundTripV3SettingsWithPerDisplay() {
+        let store = SettingsStore(userDefaults: userDefaults)
+        let perDisplay: [DisplayID: DisplaySetting] = [
+            "0": DisplaySetting(isEnabled: true),
+            "1": DisplaySetting(isEnabled: false)
+        ]
+        let original = Settings(
+            schemaVersion: 3,
+            isEnabled: true,
+            selectedProfileID: "eink-calm",
+            comfort: 0.5,
+            schedule: .off,
+            exclusions: ["com.apple.Safari"],
+            pauseOnBattery: true,
+            launchAtLogin: false,
+            reduceTransparencyResponse: .stepDown,
+            perDisplay: perDisplay
+        )
+
+        try? store.save(original)
+        let loaded = store.load()
+
+        XCTAssertEqual(loaded.schemaVersion, 3)
+        XCTAssertEqual(loaded.perDisplay.count, 2)
+        XCTAssertTrue(loaded.perDisplay["0"]?.isEnabled ?? false)
+        XCTAssertFalse(loaded.perDisplay["1"]?.isEnabled ?? true)
+        XCTAssertTrue(loaded.exclusions.contains("com.apple.Safari"))
+    }
+
+    func testMigrationSeededExclusionDefaults() {
+        // When v2→v3 migration runs, it should seed sensible exclusion defaults
+        var v2Settings = Settings(schemaVersion: 2)
+        let encoder = JSONEncoder()
+        guard let v2Data = try? encoder.encode(v2Settings) else {
+            XCTFail("Failed to encode v2 settings")
+            return
+        }
+
+        userDefaults.set(v2Data, forKey: "com.humanlayer.paperweight.settings")
+
+        let store = SettingsStore(userDefaults: userDefaults)
+        let migrated = store.load()
+
+        // Check that defaults include common applications
+        XCTAssertTrue(migrated.exclusions.contains("com.apple.finder"))
+        XCTAssertTrue(migrated.exclusions.contains("com.apple.Safari"))
+        XCTAssertTrue(migrated.exclusions.contains("com.google.Chrome"))
     }
 }
 

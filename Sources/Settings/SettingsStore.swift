@@ -53,6 +53,21 @@ class SettingsStore: SettingsStoring {
             result.schemaVersion = 2
         }
 
+        // v2 → v3: add ambient input fields with sensible defaults
+        if result.schemaVersion < 3 {
+            // Seed sensible exclusion defaults (Finder, Safari, etc.)
+            result.exclusions = [
+                "com.apple.finder",
+                "com.apple.Safari",
+                "com.google.Chrome"
+            ]
+            result.pauseOnBattery = false
+            result.launchAtLogin = false
+            result.reduceTransparencyResponse = .stepDown
+            result.perDisplay = [:]
+            result.schemaVersion = 3
+        }
+
         return result
     }
 }

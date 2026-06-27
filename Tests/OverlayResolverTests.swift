@@ -194,6 +194,193 @@ class OverlayResolverTests: XCTestCase {
         )
         XCTAssertEqual(overlay2.effectiveOpacity, 0.0)
     }
+
+    // MARK: - Phase 5: Precedence Tests
+
+    func testExcludedAppFrontmostForcesFalse() {
+        // Excluded app frontmost should force hidden
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: true
+        )
+        let resolved = resolve(inputs)
+        XCTAssertFalse(resolved.isVisible)
+    }
+
+    func testExcludedAppHigherPrecedenceThanSchedule() {
+        // Excluded app should hide even with active schedule
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleConfigured: true,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: true
+        )
+        let resolved = resolve(inputs)
+        XCTAssertFalse(resolved.isVisible)
+    }
+
+    func testSnoozeHigherPrecedenceThanExcluded() {
+        // Snooze is highest precedence, higher than excluded app
+        let futureDate = Date(timeIntervalSinceNow: 600)
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleActive: true,
+            snoozedUntil: futureDate,
+            excludedAppFrontmost: true
+        )
+        let resolved = resolve(inputs)
+        XCTAssertFalse(resolved.isVisible)
+    }
+
+    func testBatteryPauseForcesHidden() {
+        // When on battery and pauseOnBattery is true, hide
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: false,
+            onBattery: true,
+            reduceTransparency: false,
+            pauseOnBattery: true
+        )
+        let resolved = resolve(inputs)
+        XCTAssertFalse(resolved.isVisible)
+    }
+
+    func testBatteryPauseDisabledAllowsVisibility() {
+        // When pauseOnBattery is false, battery status doesn't affect visibility
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: false,
+            onBattery: true,
+            reduceTransparency: false,
+            pauseOnBattery: false
+        )
+        let resolved = resolve(inputs)
+        XCTAssertTrue(resolved.isVisible)
+    }
+
+    func testReduceTransparencyStepsDownComfort() {
+        // When reduce transparency is on and response is stepDown, comfort should be halved
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 1.0,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: false,
+            onBattery: false,
+            reduceTransparency: true,
+            pauseOnBattery: false,
+            reduceTransparencyResponse: .stepDown
+        )
+        let resolved = resolve(inputs)
+        // E-Ink Calm opacityRange is (0.15, 0.25)
+        // With comfort 1.0 * 0.5 (stepDown) = 0.5
+        // 0.5 maps to: 0.15 + (0.5 * (0.25 - 0.15)) = 0.15 + 0.05 = 0.20
+        XCTAssertAlmostEqual(resolved.effectiveOpacity, 0.20, accuracy: 0.001)
+    }
+
+    func testReduceTransparencyFlatMatte() {
+        // When reduce transparency is on and response is flatMatte, profile should change
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: false,
+            onBattery: false,
+            reduceTransparency: true,
+            pauseOnBattery: false,
+            reduceTransparencyResponse: .flatMatte
+        )
+        let resolved = resolve(inputs)
+        XCTAssertEqual(resolved.profile.id, "classic-matte")
+    }
+
+    func testReduceTransparencyDisabledNoEffect() {
+        // When reduce transparency is off, it shouldn't affect the profile or comfort
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: false,
+            onBattery: false,
+            reduceTransparency: false,
+            pauseOnBattery: false,
+            reduceTransparencyResponse: .flatMatte
+        )
+        let resolved = resolve(inputs)
+        XCTAssertEqual(resolved.profile.id, "eink-calm")
+    }
+
+    func testPerDisplayVisibilityMap() {
+        // Test that per-display settings are properly reflected in the resolved overlay
+        let perDisplay: [DisplayID: DisplaySetting] = [
+            "0": DisplaySetting(isEnabled: true),
+            "1": DisplaySetting(isEnabled: false),
+            "2": DisplaySetting(isEnabled: true)
+        ]
+        let inputs = OverlayInputs(
+            isEnabled: true,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: false,
+            onBattery: false,
+            reduceTransparency: false,
+            pauseOnBattery: false,
+            reduceTransparencyResponse: .stepDown,
+            perDisplay: perDisplay
+        )
+        let resolved = resolve(inputs)
+        XCTAssertTrue(resolved.perDisplayVisibility["0"] ?? false)
+        XCTAssertFalse(resolved.perDisplayVisibility["1"] ?? true)
+        XCTAssertTrue(resolved.perDisplayVisibility["2"] ?? false)
+    }
+
+    func testPerDisplayVisibilityWhenOverlayHidden() {
+        // When overlay is hidden globally, per-display should also be false
+        let perDisplay: [DisplayID: DisplaySetting] = [
+            "0": DisplaySetting(isEnabled: true),
+            "1": DisplaySetting(isEnabled: true)
+        ]
+        let inputs = OverlayInputs(
+            isEnabled: false,
+            selectedProfile: .eInkCalm,
+            comfort: 0.5,
+            scheduleActive: true,
+            snoozedUntil: nil,
+            excludedAppFrontmost: false,
+            onBattery: false,
+            reduceTransparency: false,
+            pauseOnBattery: false,
+            reduceTransparencyResponse: .stepDown,
+            perDisplay: perDisplay
+        )
+        let resolved = resolve(inputs)
+        XCTAssertFalse(resolved.perDisplayVisibility["0"] ?? true)
+        XCTAssertFalse(resolved.perDisplayVisibility["1"] ?? true)
+    }
 }
 
 extension XCTestCase {

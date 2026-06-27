@@ -66,6 +66,7 @@ struct TabContentView: View {
 
 struct GeneralTab: View {
     @EnvironmentObject var coordinator: AppCoordinator
+    private let launchAtLoginService = LaunchAtLoginService()
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spacingL) {
@@ -74,11 +75,116 @@ struct GeneralTab: View {
                 .foregroundColor(Theme.fg)
 
             VStack(alignment: .leading, spacing: Theme.spacingM) {
-                Toggle("Launch at Login", isOn: .constant(false))
+                Toggle("Launch at Login", isOn: Binding(
+                    get: { coordinator.settings.launchAtLogin },
+                    set: { newValue in
+                        coordinator.settings.launchAtLogin = newValue
+                        do {
+                            try launchAtLoginService.setLaunchAtLogin(newValue)
+                        } catch {
+                            // Log error but don't crash; setting is persisted anyway
+                            NSLog("Failed to set launch at login: %@", error.localizedDescription)
+                        }
+                    }
+                ))
                     .tint(Theme.green)
 
-                Toggle("Pause on Battery", isOn: .constant(false))
+                Toggle("Pause on Battery", isOn: Binding(
+                    get: { coordinator.settings.pauseOnBattery },
+                    set: { newValue in
+                        coordinator.settings.pauseOnBattery = newValue
+                    }
+                ))
                     .tint(Theme.green)
+            }
+
+            Divider()
+                .foregroundColor(Theme.bg2)
+
+            // Default Comfort
+            VStack(alignment: .leading, spacing: Theme.spacingM) {
+                Text("Default Comfort")
+                    .font(Theme.monoFont(size: 12, weight: .bold))
+                    .foregroundColor(Theme.fg2)
+                    .tracking(0.02)
+
+                HStack(spacing: Theme.spacingM) {
+                    Slider(
+                        value: Binding(
+                            get: { coordinator.settings.comfort },
+                            set: { newValue in
+                                coordinator.settings.comfort = newValue
+                            }
+                        ),
+                        in: 0.0...1.0
+                    )
+                    .tint(Theme.blue)
+
+                    Text(String(format: "%.0f%%", coordinator.settings.comfort * 100))
+                        .font(Theme.monoFont(size: 11))
+                        .foregroundColor(Theme.fg4)
+                        .frame(width: 40)
+                }
+            }
+
+            Divider()
+                .foregroundColor(Theme.bg2)
+
+            // Reduce Transparency Response
+            VStack(alignment: .leading, spacing: Theme.spacingM) {
+                Text("When Reduce Transparency is On")
+                    .font(Theme.monoFont(size: 12, weight: .bold))
+                    .foregroundColor(Theme.fg2)
+                    .tracking(0.02)
+
+                Picker("Response", selection: Binding(
+                    get: { coordinator.settings.reduceTransparencyResponse },
+                    set: { newValue in
+                        coordinator.settings.reduceTransparencyResponse = newValue
+                    }
+                )) {
+                    Text("Step Down Comfort by 50%").tag(ReduceTransparencyResponse.stepDown)
+                    Text("Switch to Flat Matte").tag(ReduceTransparencyResponse.flatMatte)
+                }
+                .pickerStyle(.radioGroup)
+            }
+
+            Divider()
+                .foregroundColor(Theme.bg2)
+
+            // Per-Display Settings
+            VStack(alignment: .leading, spacing: Theme.spacingM) {
+                Text("Displays")
+                    .font(Theme.monoFont(size: 12, weight: .bold))
+                    .foregroundColor(Theme.fg2)
+                    .tracking(0.02)
+
+                VStack(alignment: .leading, spacing: Theme.spacingS) {
+                    ForEach(NSScreen.screens, id: \.self) { screen in
+                        let displayID = String(NSScreen.screens.firstIndex(of: screen) ?? 0)
+                        let displaySetting = coordinator.settings.perDisplay[displayID] ?? DisplaySetting()
+
+                        HStack {
+                            Text("Display \((NSScreen.screens.firstIndex(of: screen) ?? 0) + 1)")
+                                .font(Theme.monoFont(size: 11))
+                                .foregroundColor(Theme.fg4)
+
+                            Spacer()
+
+                            Toggle("", isOn: Binding(
+                                get: { displaySetting.isEnabled },
+                                set: { newValue in
+                                    var updated = coordinator.settings
+                                    var displaySettings = updated.perDisplay
+                                    displaySettings[displayID] = DisplaySetting(isEnabled: newValue)
+                                    updated.perDisplay = displaySettings
+                                    coordinator.settings = updated
+                                }
+                            ))
+                            .tint(Theme.green)
+                        }
+                    }
+                }
             }
 
             Spacer()
@@ -345,15 +451,88 @@ struct ScheduleTab: View {
 // MARK: - ExclusionsTab
 
 struct ExclusionsTab: View {
+    @EnvironmentObject var coordinator: AppCoordinator
+    @State private var bundleIDInput: String = ""
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spacingL) {
             Text("Exclusions")
                 .font(Theme.monoFont(size: 16, weight: .bold))
                 .foregroundColor(Theme.fg)
 
-            Text("Exclusion management coming in Phase 5")
-                .font(Theme.monoFont(size: 12))
+            Text("Hide overlay when these apps are frontmost.")
+                .font(Theme.monoFont(size: 11))
                 .foregroundColor(Theme.fg4)
+                .lineLimit(2)
+
+            // Input section
+            HStack(spacing: Theme.spacingM) {
+                TextField("com.example.app", text: $bundleIDInput)
+                    .font(Theme.monoFont(size: 11))
+                    .textFieldStyle(.roundedBorder)
+                    .padding(Theme.spacingS)
+                    .background(Theme.bg1)
+                    .cornerRadius(Theme.cornerRadiusSmall)
+
+                Button(action: {
+                    let trimmed = bundleIDInput.trimmingCharacters(in: .whitespaces)
+                    guard !trimmed.isEmpty else { return }
+                    var updated = coordinator.settings
+                    if !updated.exclusions.contains(trimmed) {
+                        updated.exclusions.append(trimmed)
+                        coordinator.settings = updated
+                    }
+                    bundleIDInput = ""
+                }) {
+                    Text("Add")
+                        .font(Theme.monoFont(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.bg0)
+                        .frame(minWidth: 50)
+                        .padding(.vertical, Theme.spacingS)
+                        .background(Theme.green)
+                        .cornerRadius(Theme.cornerRadiusSmall)
+                }
+            }
+
+            Divider()
+                .foregroundColor(Theme.bg2)
+
+            // List of exclusions
+            VStack(alignment: .leading, spacing: Theme.spacingS) {
+                if coordinator.settings.exclusions.isEmpty {
+                    Text("No exclusions. All apps show the overlay.")
+                        .font(Theme.monoFont(size: 11))
+                        .foregroundColor(Theme.fg4)
+                        .italic()
+                } else {
+                    ForEach(coordinator.settings.exclusions, id: \.self) { bundleID in
+                        HStack {
+                            Text(bundleID)
+                                .font(Theme.monoFont(size: 10))
+                                .foregroundColor(Theme.fg2)
+                                .truncationMode(.tail)
+                                .lineLimit(1)
+
+                            Spacer()
+
+                            Button(action: {
+                                var updated = coordinator.settings
+                                updated.exclusions.removeAll { $0 == bundleID }
+                                coordinator.settings = updated
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(Theme.orange)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Remove exclusion")
+                        }
+                        .padding(Theme.spacingM)
+                        .background(Theme.bg1)
+                        .cornerRadius(Theme.cornerRadiusSmall)
+                    }
+                }
+            }
 
             Spacer()
         }

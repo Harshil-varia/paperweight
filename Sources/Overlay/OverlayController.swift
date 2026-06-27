@@ -46,8 +46,17 @@ class OverlayController: OverlaySink {
         let scale = NSScreen.main?.backingScaleFactor ?? 2.0
         let tile = engine.tile(for: resolved.profile, scale: scale)
 
-        for panel in panels.values {
-            panel.apply(resolved, tile: tile)
+        // Apply per-display visibility
+        for (screenId, panel) in panels {
+            let displayID = String(screenId)
+            let perDisplayVisible = resolved.perDisplayVisibility[displayID] ?? resolved.isVisible
+            let perDisplayResolved = ResolvedOverlay(
+                isVisible: perDisplayVisible,
+                profile: resolved.profile,
+                effectiveOpacity: resolved.effectiveOpacity,
+                perDisplayVisibility: resolved.perDisplayVisibility
+            )
+            panel.apply(perDisplayResolved, tile: tile)
         }
     }
 }
