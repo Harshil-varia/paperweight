@@ -45,7 +45,14 @@ class SettingsStore: SettingsStoring {
     }
 
     private func migrate(_ settings: Settings) -> Settings {
-        // Phase 1 has no migrations yet; stub for future use
-        return settings
+        var result = settings
+
+        // v1 → v2: add schedule field (default to .off if not present)
+        if result.schemaVersion < 2 {
+            result.schedule = .off
+            result.schemaVersion = 2
+        }
+
+        return result
     }
 }

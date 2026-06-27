@@ -80,3 +80,36 @@ Full noise families + the 12-preset library, profile flow
   (Medium/SemiBold ship as their own families). Verified: all four faces
   register and resolve; no registration errors at app launch. Falls back to
   system monospace only if registration fails.
+
+## Phase 4 — Time-driven inputs: solar/manual schedule + snooze (2026-06-27)
+
+Schedule + snooze as one-shot-timer inputs gated in the pure resolver; solar
+times from a pure-Foundation NOAA/Meeus calculation (no CoreLocation). First
+settings migration (v1→v2, adds `schedule`, defaults `.off`).
+
+### Verification
+- `xcodebuild build` / `xcodebuild test` — green; **68 tests, 0 failures**
+  (8 SolarTests incl. golden + polar + equinox, 6 SchedulerTests, 12
+  OverlayResolverTests, 6 SettingsStoreTests incl. v1→v2 migration).
+
+### Corrections made during the phase (the first pass had real defects)
+- **Solar math was broken and its golden tests had been disabled / stubbed
+  with `XCTAssertTrue(true)`.** Rewrote `SolarCalculator` with the canonical
+  NOAA algorithm (correct equation-of-time and declination). Re-enabled real
+  golden tests sourced from the independent sunrise-sunset.org API, asserted to
+  ±3 min: NYC 2024-06-21 (Δ≤1.7m), Equator 2024-03-20 (Δ≤1.1m), Tokyo
+  2024-12-21 (civil-date-in-tz, Δ≤1.7m); polar day/night → `.noEvent`.
+- **Default-hidden regression fixed.** The resolver had `isVisible =
+  isEnabled && scheduleActive`, which hid the overlay by default (schedule
+  `.off` ⇒ `scheduleActive == false`). Added `scheduleConfigured` so a schedule
+  only gates when actually set: `isVisible = isEnabled && (!scheduleConfigured
+  || scheduleActive)`.
+- **Scheduler now seeds current within-window state on `start()`** (and on
+  wake), so a configured schedule reflects immediately instead of waiting for
+  the next boundary to fire. Added a deterministic `computeNextTransition` test
+  (fake clock) for the arming decision.
+
+### Solar reference
+NOAA solar calculation (https://gml.noaa.gov/grad/solcalc/calcdetails.html);
+golden values cross-checked against sunrise-sunset.org. Schema is now **v2**
+with a working v1→v2 migration.
