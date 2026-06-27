@@ -27,7 +27,13 @@ uint hash2D(uint x, uint y, uint seed) {
     return h;
 }
 
-// Fade function for smoothstep-like behavior
+// 3D hash for Worley/cellular noise
+uint hash3D(uint x, uint y, uint z, uint seed) {
+    uint h = hash(x ^ (y << 16) ^ (z << 8), seed);
+    return h;
+}
+
+// Fade function for smoothstep-like behavior (Perlin/Simplex)
 float fade(float t) {
     return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
 }
@@ -37,7 +43,14 @@ float lerp(float a, float b, float t) {
     return mix(a, b, t);
 }
 
-// Value noise: interpolate between random values at lattice points
+// ===== White Noise (type 0) =====
+float whiteNoise(float x, float y, uint seed) {
+    uint xi = uint(x);
+    uint yi = uint(y);
+    return float(hash2D(xi, yi, seed)) / 4294967295.0;
+}
+
+// ===== Value Noise (type 1) =====
 float valueNoise(float x, float y, uint seed, uint tileSize) {
     float xi = fmod(floor(x), float(tileSize));
     float yi = fmod(floor(y), float(tileSize));
@@ -64,11 +77,83 @@ float valueNoise(float x, float y, uint seed, uint tileSize) {
     return result;
 }
 
-// White noise: pure random per pixel
-float whiteNoise(float x, float y, uint seed) {
-    uint xi = uint(x);
-    uint yi = uint(y);
-    return float(hash2D(xi, yi, seed)) / 4294967295.0;
+// ===== Perlin Noise (type 2) =====
+float perlinNoise(float x, float y, uint seed, uint tileSize) {
+    // Same as value noise for now; can be enhanced with gradient vectors
+    return valueNoise(x, y, seed, tileSize);
+}
+
+// ===== Simplex Noise (type 3) =====
+float simplexNoise(float x, float y, uint seed, uint tileSize) {
+    // Simplified simplex using value noise as base
+    float scale = 0.7;  // Simplex typically gives values in a different range
+    return valueNoise(x, y, seed, tileSize) * scale + (1.0 - scale) * 0.5;
+}
+
+// ===== Fractional Brownian Motion (type 4) =====
+float fbm(float x, float y, uint seed, uint tileSize, int octaves, float lacunarity, float gain) {
+    float result = 0.0;
+    float amplitude = 1.0;
+    float frequency = 1.0;
+    float maxValue = 0.0;
+
+    for (int i = 0; i < octaves && i < 8; i++) {
+        result += amplitude * valueNoise(x * frequency, y * frequency, seed + uint(i), tileSize);
+        maxValue += amplitude;
+        amplitude *= gain;
+        frequency *= lacunarity;
+    }
+
+    return result / maxValue;
+}
+
+// ===== Ridged Multifractal (type 5) =====
+float ridgedNoise(float x, float y, uint seed, uint tileSize, int octaves, float lacunarity, float gain) {
+    float result = 0.0;
+    float amplitude = 1.0;
+    float frequency = 1.0;
+    float maxValue = 0.0;
+
+    for (int i = 0; i < octaves && i < 8; i++) {
+        float n = valueNoise(x * frequency, y * frequency, seed + uint(i), tileSize);
+        n = 1.0 - abs(n * 2.0 - 1.0);  // Ridge the noise
+        result += amplitude * n;
+        maxValue += amplitude;
+        amplitude *= gain;
+        frequency *= lacunarity;
+    }
+
+    return result / maxValue;
+}
+
+// ===== Worley/Cellular Noise (type 6) =====
+float worleyNoise(float x, float y, uint seed, uint tileSize) {
+    float cellX = floor(x);
+    float cellY = floor(y);
+    float fracX = fract(x);
+    float fracY = fract(y);
+
+    float minDist = 2.0;
+
+    // Check 3x3 neighborhood
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            uint neighborX = uint(cellX + dx) % tileSize;
+            uint neighborY = uint(cellY + dy) % tileSize;
+
+            // Random point in the cell
+            float px = float(hash2D(neighborX, neighborY, seed)) / 4294967295.0;
+            float py = float(hash2D(neighborX + 1, neighborY + 1, seed)) / 4294967295.0;
+
+            float dx_f = fracX - (float(dx) + px);
+            float dy_f = fracY - (float(dy) + py);
+            float dist = sqrt(dx_f * dx_f + dy_f * dy_f);
+
+            minDist = min(minDist, dist);
+        }
+    }
+
+    return minDist / 1.414;  // Normalize by max distance
 }
 
 // Main compute kernel
@@ -83,22 +168,49 @@ kernel void generateNoise(
 
     float x = float(id.x);
     float y = float(id.y);
+    float scaledX = x * params.scale;
+    float scaledY = y * params.scale;
 
     // Generate noise based on type
     float noise = 0.0;
-    if (params.noiseType == 0) {
-        // White noise
-        noise = whiteNoise(x, y, params.seed);
-    } else {
-        // Value noise (default for most types in Phase 2)
-        noise = valueNoise(x * params.scale, y * params.scale, params.seed, params.tileSize);
+    switch (params.noiseType) {
+        case 0:
+            // White noise
+            noise = whiteNoise(scaledX, scaledY, params.seed);
+            break;
+        case 1:
+            // Value noise
+            noise = valueNoise(scaledX, scaledY, params.seed, params.tileSize);
+            break;
+        case 2:
+            // Perlin noise
+            noise = perlinNoise(scaledX, scaledY, params.seed, params.tileSize);
+            break;
+        case 3:
+            // Simplex noise
+            noise = simplexNoise(scaledX, scaledY, params.seed, params.tileSize);
+            break;
+        case 4:
+            // fBm (Fractional Brownian Motion)
+            noise = fbm(scaledX, scaledY, params.seed, params.tileSize, 4, 2.0, 0.5);
+            break;
+        case 5:
+            // Ridged multifractal
+            noise = ridgedNoise(scaledX, scaledY, params.seed, params.tileSize, 4, 2.0, 0.5);
+            break;
+        case 6:
+            // Worley/Cellular noise
+            noise = worleyNoise(scaledX, scaledY, params.seed, params.tileSize);
+            break;
+        default:
+            noise = valueNoise(scaledX, scaledY, params.seed, params.tileSize);
     }
+
+    // Clamp to valid range
+    noise = clamp(noise, 0.0, 1.0);
 
     // Apply matte lift (brighten the darks)
     noise = mix(params.matteLift, 1.0, noise);
-
-    // Apply tint (warm up or cool down, luminance-only so no hue shift)
-    // For now, tint is not applied at the pixel level (reserved for later enhancement)
 
     // Convert to 0-255 range
     uchar value = uchar(clamp(noise * 255.0, 0.0, 255.0));

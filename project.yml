@@ -19,6 +19,7 @@ targets:
     resources:
       - path: Resources/Assets.xcassets
       - path: Resources/Shaders
+      - path: Resources/Fonts
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.humanlayer.paperweight
       INFOPLIST_KEY_LSUIElement: YES

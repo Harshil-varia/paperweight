@@ -16,6 +16,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
+        // Register bundled JetBrains Mono faces before any UI renders.
+        FontRegistrar.registerBundledFonts()
+
         // Create and own the overlay controller with engine access
         overlayController = OverlayController(engine: engine)
 

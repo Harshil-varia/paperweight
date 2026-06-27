@@ -27,13 +27,6 @@ struct Settings: Codable, Equatable {
 
     /// Get the selected TextureProfile by ID
     var selectedProfile: TextureProfile {
-        switch selectedProfileID {
-        case "classic-matte":
-            return .classicMatte
-        case "eink-calm":
-            return .eInkCalm
-        default:
-            return .eInkCalm  // Fallback to default
-        }
+        TextureProfile.preset(withID: selectedProfileID) ?? .eInkCalm
     }
 }

@@ -11,5 +11,10 @@ struct PaperweightApp: App {
                 .environmentObject(appDelegate.coordinator)
         }
         .menuBarExtraStyle(.window)
+
+        Window("Preferences", id: "preferences") {
+            PreferencesView()
+                .environmentObject(appDelegate.coordinator)
+        }
     }
 }

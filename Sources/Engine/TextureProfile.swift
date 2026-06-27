@@ -49,8 +49,10 @@ enum NoiseType: String, Codable, Equatable {
     case white      // Pure white noise
     case value      // Value noise / Voronoi with value
     case perlin     // Perlin noise
+    case simplex    // Simplex noise
     case fbm        // Fractional Brownian Motion
     case ridged     // Ridged multifractal
+    case worley     // Worley/Cellular noise
 
     var requiresOctaves: Bool {
         self == .fbm || self == .ridged
@@ -62,8 +64,10 @@ enum NoiseType: String, Codable, Equatable {
         case .white: return 0
         case .value: return 1
         case .perlin: return 2
-        case .fbm: return 3
-        case .ridged: return 4
+        case .simplex: return 3
+        case .fbm: return 4
+        case .ridged: return 5
+        case .worley: return 6
         }
     }
 }
@@ -99,29 +103,185 @@ struct OpacityRange: Codable, Equatable {
 // MARK: - Preset Library
 
 extension TextureProfile {
-    /// Classic Matte: minimal grain, neutral tint, soft comfort band
-    static let classicMatte = TextureProfile(
-        id: "classic-matte",
-        name: "Classic Matte",
-        noiseType: .value,
-        tint: 0.0,
-        matteLift: 0.15,
-        blendMode: .softLight,
-        opacityRange: OpacityRange(0.15, 0.30),
-        tileSize: 512,
-        seed: 42
-    )
+    // MARK: - Comfort Row (Functional Presets)
 
-    /// E-Ink Calm: nearly invisible grain, no tint, gentle lift, maximum comfort (default)
+    /// E-Ink Calm: minimal grain, no weave, neutral #F2F1EC, lift 0.12, Soft light, 0.20 (ours, DEFAULT)
     static let eInkCalm = TextureProfile(
         id: "eink-calm",
         name: "E-Ink Calm",
         noiseType: .white,
         tint: 0.0,
-        matteLift: 0.10,
+        matteLift: 0.12,
         blendMode: .softLight,
-        opacityRange: OpacityRange(0.12, 0.25),
+        opacityRange: OpacityRange(0.15, 0.25),
         tileSize: 256,
         seed: 128
     )
+
+    /// Classic Matte: fBm (mid octaves), no weave, neutral faint-warm tint, lift 0.06, Soft light, 0.18
+    static let classicMatte = TextureProfile(
+        id: "classic-matte",
+        name: "Classic Matte",
+        noiseType: .fbm,
+        tint: 0.01,
+        matteLift: 0.06,
+        blendMode: .softLight,
+        opacityRange: OpacityRange(0.15, 0.21),
+        tileSize: 512,
+        seed: 42
+    )
+
+    /// Vellum Mist: fBm (low octaves), no weave, warm haze #F6F4EF, lift 0.05, Soft light, 0.12
+    static let vellumMist = TextureProfile(
+        id: "vellum-mist",
+        name: "Vellum Mist",
+        noiseType: .fbm,
+        tint: 0.02,
+        matteLift: 0.05,
+        blendMode: .softLight,
+        opacityRange: OpacityRange(0.10, 0.14),
+        tileSize: 256,
+        seed: 256
+    )
+
+    /// Blueprint: value + faint grid, cool cyan #DCE6EC, lift 0.05, Overlay, 0.16 (ours)
+    static let blueprint = TextureProfile(
+        id: "blueprint",
+        name: "Blueprint",
+        noiseType: .value,
+        tint: -0.10,
+        matteLift: 0.05,
+        blendMode: .overlay,
+        opacityRange: OpacityRange(0.12, 0.20),
+        tileSize: 512,
+        seed: 512
+    )
+
+    // MARK: - Character Row (Decorative Presets)
+
+    /// Whisper Weave: value + fine grain, HIGH fine weave/anisotropy, cool neutral #F4F4F2, lift 0.05, Soft light, 0.16
+    static let whisperWeave = TextureProfile(
+        id: "whisper-weave",
+        name: "Whisper Weave",
+        noiseType: .value,
+        tint: -0.01,
+        matteLift: 0.05,
+        blendMode: .softLight,
+        opacityRange: OpacityRange(0.13, 0.19),
+        tileSize: 256,
+        seed: 1001
+    )
+
+    /// Sunbaked Parchment: fBm (heavy grain), no weave, amber #E8C893, lift 0.08, Multiply, 0.22
+    static let sunbakedParchment = TextureProfile(
+        id: "sunbaked-parchment",
+        name: "Sunbaked Parchment",
+        noiseType: .fbm,
+        tint: 0.15,
+        matteLift: 0.08,
+        blendMode: .multiply,
+        opacityRange: OpacityRange(0.18, 0.26),
+        tileSize: 512,
+        seed: 1002
+    )
+
+    /// Saddle Linen: value, coarse linen weave, earthy #C7A26A, lift 0.07, Overlay, 0.20
+    static let saddleLinen = TextureProfile(
+        id: "saddle-linen",
+        name: "Saddle Linen",
+        noiseType: .value,
+        tint: 0.12,
+        matteLift: 0.07,
+        blendMode: .overlay,
+        opacityRange: OpacityRange(0.16, 0.24),
+        tileSize: 512,
+        seed: 1003
+    )
+
+    /// Painter's Press: worley + value tooth, no weave, cool paper #EDEBE6, lift 0.06, Soft light, 0.18
+    static let paintersPress = TextureProfile(
+        id: "painters-press",
+        name: "Painter's Press",
+        noiseType: .worley,
+        tint: -0.01,
+        matteLift: 0.06,
+        blendMode: .softLight,
+        opacityRange: OpacityRange(0.15, 0.21),
+        tileSize: 512,
+        seed: 1004
+    )
+
+    /// Mulberry Veil: perlin (sparse), no weave, plum #6E4A6B, lift 0.04, Screen, 0.14
+    static let mulberryVeil = TextureProfile(
+        id: "mulberry-veil",
+        name: "Mulberry Veil",
+        noiseType: .perlin,
+        tint: -0.05,
+        matteLift: 0.04,
+        blendMode: .screen,
+        opacityRange: OpacityRange(0.11, 0.17),
+        tileSize: 256,
+        seed: 1005
+    )
+
+    /// Monastic Felt: worley (dense), no weave, muted warm #B7AE9E, lift 0.07, Multiply, 0.18
+    static let monasticFelt = TextureProfile(
+        id: "monastic-felt",
+        name: "Monastic Felt",
+        noiseType: .worley,
+        tint: 0.05,
+        matteLift: 0.07,
+        blendMode: .multiply,
+        opacityRange: OpacityRange(0.15, 0.21),
+        tileSize: 512,
+        seed: 1006
+    )
+
+    /// Carbon Ledger: value (fine) + faint horizontal ruling, graphite #8A8F98, lift 0.05, Overlay, 0.16
+    static let carbonLedger = TextureProfile(
+        id: "carbon-ledger",
+        name: "Carbon Ledger",
+        noiseType: .value,
+        tint: -0.02,
+        matteLift: 0.05,
+        blendMode: .overlay,
+        opacityRange: OpacityRange(0.13, 0.19),
+        tileSize: 256,
+        seed: 1007
+    )
+
+    /// Riso Grain: white (coarse), no weave, faint duotone, lift 0.06, Multiply, 0.18 (ours)
+    static let risoGrain = TextureProfile(
+        id: "riso-grain",
+        name: "Riso Grain",
+        noiseType: .white,
+        tint: 0.03,
+        matteLift: 0.06,
+        blendMode: .multiply,
+        opacityRange: OpacityRange(0.15, 0.21),
+        tileSize: 512,
+        seed: 1008
+    )
+
+    // MARK: - Library Access
+
+    /// All 12 presets organized by category: Comfort row leading with E-Ink Calm (default)
+    static let allPresets: [[TextureProfile]] = [
+        // Comfort row (4 presets)
+        [eInkCalm, classicMatte, vellumMist, blueprint],
+        // Character row (8 presets)
+        [whisperWeave, sunbakedParchment, saddleLinen, paintersPress, mulberryVeil, monasticFelt, carbonLedger, risoGrain]
+    ]
+
+    /// Flat list of all 12 presets for easy lookup
+    static let flatPresets = [
+        eInkCalm, classicMatte, vellumMist, blueprint,
+        whisperWeave, sunbakedParchment, saddleLinen, paintersPress,
+        mulberryVeil, monasticFelt, carbonLedger, risoGrain
+    ]
+
+    /// Find a preset by ID
+    static func preset(withID id: String) -> TextureProfile? {
+        flatPresets.first { $0.id == id }
+    }
 }

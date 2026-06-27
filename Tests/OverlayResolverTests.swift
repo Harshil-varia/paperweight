@@ -23,15 +23,15 @@ class OverlayResolverTests: XCTestCase {
     }
 
     func testResolverClampsComfortIntoEInkCalmOpacityBand() {
-        // E-Ink Calm has opacityRange (0.12, 0.25)
-        // Comfort 0.0 should map to minOpacity (0.12)
+        // E-Ink Calm has opacityRange (0.15, 0.25)
+        // Comfort 0.0 should map to minOpacity (0.15)
         let minInputs = OverlayInputs(
             isEnabled: true,
             selectedProfile: .eInkCalm,
             comfort: 0.0
         )
         let minResolved = resolve(minInputs)
-        XCTAssertAlmostEqual(minResolved.effectiveOpacity, 0.12, accuracy: 0.001)
+        XCTAssertAlmostEqual(minResolved.effectiveOpacity, 0.15, accuracy: 0.001)
 
         // Comfort 1.0 should map to maxOpacity (0.25)
         let maxInputs = OverlayInputs(
@@ -49,11 +49,11 @@ class OverlayResolverTests: XCTestCase {
             comfort: 0.5
         )
         let midResolved = resolve(midInputs)
-        XCTAssertAlmostEqual(midResolved.effectiveOpacity, 0.185, accuracy: 0.001)
+        XCTAssertAlmostEqual(midResolved.effectiveOpacity, 0.20, accuracy: 0.001)
     }
 
     func testResolverClampsComfortIntoClassicMatteOpacityBand() {
-        // Classic Matte has opacityRange (0.15, 0.30)
+        // Classic Matte has opacityRange (0.15, 0.21)
         let minInputs = OverlayInputs(
             isEnabled: true,
             selectedProfile: .classicMatte,
@@ -68,7 +68,7 @@ class OverlayResolverTests: XCTestCase {
             comfort: 1.0
         )
         let maxResolved = resolve(maxInputs)
-        XCTAssertAlmostEqual(maxResolved.effectiveOpacity, 0.30, accuracy: 0.001)
+        XCTAssertAlmostEqual(maxResolved.effectiveOpacity, 0.21, accuracy: 0.001)
     }
 
     func testResolverProfilePassthrough() {
