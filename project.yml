@@ -1,0 +1,38 @@
+name: Paperweight
+options:
+  bundleIdPrefix: com.humanlayer
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+targets:
+  Paperweight:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/App
+      - path: Sources/Settings
+      - path: Sources/Control
+      - path: Sources/Overlay
+      - path: Sources/UI
+    resources:
+      - path: Resources/Assets.xcassets
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.humanlayer.paperweight
+      INFOPLIST_KEY_LSUIElement: YES
+      SWIFT_VERSION: "6"
+    info:
+      path: Sources/App/Info.plist
+      properties:
+        CFBundleShortVersionString: "0.1"
+
+  PaperweightTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      PRODUCT_BUNDLE_IDENTIFIER: com.humanlayer.paperweight.tests
+    dependencies:
+      - target: Paperweight
