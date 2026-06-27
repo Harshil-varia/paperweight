@@ -3,6 +3,7 @@ import Combine
 
 class AppCoordinator: ObservableObject {
     private let settingsStore: SettingsStoring
+    private let engine: TextureProviding
     private var cancellables = Set<AnyCancellable>()
 
     @Published private(set) var resolved: ResolvedOverlay
@@ -14,8 +15,13 @@ class AppCoordinator: ObservableObject {
         }
     }
 
-    init(settingsStore: SettingsStoring = SettingsStore()) {
+    init(
+        settingsStore: SettingsStoring = SettingsStore(),
+        engine: TextureProviding = TextureEngine()
+    ) {
         self.settingsStore = settingsStore
+        self.engine = engine
+
         let loadedSettings = settingsStore.load()
         self.settings = loadedSettings
 
@@ -23,18 +29,20 @@ class AppCoordinator: ObservableObject {
         settingsStore.register(defaults: Settings())
 
         // Initialize resolved state from loaded settings
+        let profile = loadedSettings.selectedProfile
         let inputs = OverlayInputs(
             isEnabled: loadedSettings.isEnabled,
-            selectedProfileID: loadedSettings.selectedProfileID,
+            selectedProfile: profile,
             comfort: loadedSettings.comfort
         )
         self.resolved = resolve(inputs)
     }
 
     private func recompute() {
+        let profile = settings.selectedProfile
         let inputs = OverlayInputs(
             isEnabled: settings.isEnabled,
-            selectedProfileID: settings.selectedProfileID,
+            selectedProfile: profile,
             comfort: settings.comfort
         )
         let newResolved = resolve(inputs)

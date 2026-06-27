@@ -65,7 +65,7 @@ class OverlayControllerTests: XCTestCase {
 
         let resolved = ResolvedOverlay(
             isVisible: true,
-            profileID: "test",
+            profile: .eInkCalm,
             effectiveOpacity: 0.2
         )
 

@@ -38,7 +38,7 @@ class OverlayPanel: NSPanel {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func apply(_ resolved: ResolvedOverlay) {
-        layerView.apply(resolved)
+    func apply(_ resolved: ResolvedOverlay, tile: TileImage?) {
+        layerView.apply(resolved, tile: tile)
     }
 }

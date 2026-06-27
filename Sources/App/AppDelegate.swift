@@ -3,15 +3,21 @@ import Combine
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
-    let coordinator = AppCoordinator()
+    private let engine = TextureEngine()
+    let coordinator: AppCoordinator
     var overlayController: OverlayController?
     private var cancellables = Set<AnyCancellable>()
+
+    override init() {
+        self.coordinator = AppCoordinator(engine: engine)
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        // Create and own the overlay controller
-        overlayController = OverlayController()
+        // Create and own the overlay controller with engine access
+        overlayController = OverlayController(engine: engine)
 
         // Bind coordinator's resolved overlay to the overlay controller
         coordinator.$resolved

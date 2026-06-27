@@ -9,8 +9,11 @@ protocol OverlaySink {
 @MainActor
 class OverlayController: OverlaySink {
     private var panels: [Int: OverlayPanel] = [:]
+    private let engine: TextureProviding
 
-    init() {}
+    init(engine: TextureProviding = TextureEngine()) {
+        self.engine = engine
+    }
 
     func reconcile(_ screens: [NSScreen]) {
         // Create a set of current screen IDs (use index as ID)
@@ -40,8 +43,11 @@ class OverlayController: OverlaySink {
     }
 
     func apply(_ resolved: ResolvedOverlay) {
+        let scale = NSScreen.main?.backingScaleFactor ?? 2.0
+        let tile = engine.tile(for: resolved.profile, scale: scale)
+
         for panel in panels.values {
-            panel.apply(resolved)
+            panel.apply(resolved, tile: tile)
         }
     }
 }

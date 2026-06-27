@@ -14,13 +14,16 @@ targets:
       - path: Sources/Settings
       - path: Sources/Control
       - path: Sources/Overlay
+      - path: Sources/Engine
       - path: Sources/UI
     resources:
       - path: Resources/Assets.xcassets
+      - path: Resources/Shaders
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.humanlayer.paperweight
       INFOPLIST_KEY_LSUIElement: YES
       SWIFT_VERSION: "6"
+      COPY_PHASE_STRIP: NO
     info:
       path: Sources/App/Info.plist
       properties:
