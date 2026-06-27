@@ -95,6 +95,8 @@ struct Settings: Codable, Equatable {
     var reduceTransparencyResponse: ReduceTransparencyResponse = .stepDown
     /// Per-display visibility control; maps display identifier to per-display settings
     var perDisplay: [DisplayID: DisplaySetting] = [:]
+    /// Whether the first-run onboarding panel has been shown and dismissed
+    var hasSeenOnboarding: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -107,6 +109,7 @@ struct Settings: Codable, Equatable {
         case launchAtLogin
         case reduceTransparencyResponse
         case perDisplay
+        case hasSeenOnboarding
     }
 
     init(
@@ -119,7 +122,8 @@ struct Settings: Codable, Equatable {
         pauseOnBattery: Bool = false,
         launchAtLogin: Bool = false,
         reduceTransparencyResponse: ReduceTransparencyResponse = .stepDown,
-        perDisplay: [DisplayID: DisplaySetting] = [:]
+        perDisplay: [DisplayID: DisplaySetting] = [:],
+        hasSeenOnboarding: Bool = false
     ) {
         self.schemaVersion = schemaVersion
         self.isEnabled = isEnabled
@@ -131,6 +135,7 @@ struct Settings: Codable, Equatable {
         self.launchAtLogin = launchAtLogin
         self.reduceTransparencyResponse = reduceTransparencyResponse
         self.perDisplay = perDisplay
+        self.hasSeenOnboarding = hasSeenOnboarding
     }
 
     /// Get the selected TextureProfile by ID

@@ -16,13 +16,19 @@ targets:
       - path: Sources/Overlay
       - path: Sources/Engine
       - path: Sources/UI
-    resources:
-      - path: Resources/Assets.xcassets
-      - path: Resources/Shaders
-      - path: Resources/Fonts
+      # Resources live under `sources` — XcodeGen has no separate `resources`
+      # key and auto-assigns build phases by file type.
+      - path: Resources/Assets.xcassets   # compiled by actool → Assets.car + AppIcon
+      - path: Resources/Fonts             # JetBrains Mono TTFs (copied)
+      # NOTE: Resources/Shaders/Noise.metal is intentionally NOT bundled.
+      # XcodeGen routes .metal to the Metal compile phase, which fails on
+      # machines without the build-time Metal Toolchain. The shader is shipped
+      # as an embedded string in MetalNoiseGenerator.swift and compiled at
+      # runtime (see ADR-0002).
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.humanlayer.paperweight
       INFOPLIST_KEY_LSUIElement: YES
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       SWIFT_VERSION: "6"
       COPY_PHASE_STRIP: NO
     info:

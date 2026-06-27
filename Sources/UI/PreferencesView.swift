@@ -542,6 +542,13 @@ struct ExclusionsTab: View {
 // MARK: - AboutTab
 
 struct AboutTab: View {
+    private var appVersion: String {
+        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+            return version
+        }
+        return "0.1.0"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spacingL) {
             Text("About Paperweight")
@@ -554,15 +561,44 @@ struct AboutTab: View {
                         .font(Theme.monoFont(size: 11))
                         .foregroundColor(Theme.fg4)
                     Spacer()
-                    Text("0.1")
+                    Text(appVersion)
                         .font(Theme.monoFont(size: 11))
                         .foregroundColor(Theme.fg)
                 }
 
+                Divider()
+                    .foregroundColor(Theme.bg2)
+
                 Text("No network calls. No telemetry. No tracking.")
                     .font(Theme.monoFont(size: 11))
-                    .foregroundColor(Theme.fg4)
-                    .lineLimit(3)
+                    .foregroundColor(Theme.fg)
+                    .lineSpacing(1.5)
+
+                Divider()
+                    .foregroundColor(Theme.bg2)
+
+                VStack(alignment: .leading, spacing: Theme.spacingS) {
+                    Text("Credits & Licenses")
+                        .font(Theme.monoFont(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.fg)
+
+                    VStack(alignment: .leading, spacing: Theme.spacingXS) {
+                        Text("Paperweight")
+                            .font(Theme.monoFont(size: 10))
+                            .foregroundColor(Theme.fg2)
+                        Text("Copyright © 2026 AI-First Consulting")
+                            .font(Theme.monoFont(size: 9))
+                            .foregroundColor(Theme.fg4)
+
+                        Text("JetBrains Mono")
+                            .font(Theme.monoFont(size: 10))
+                            .foregroundColor(Theme.fg2)
+                            .padding(.top, Theme.spacingXS)
+                        Text("Licensed under the OFL 1.1 License")
+                            .font(Theme.monoFont(size: 9))
+                            .foregroundColor(Theme.fg4)
+                    }
+                }
             }
 
             Spacer()
