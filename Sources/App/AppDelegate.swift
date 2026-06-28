@@ -69,11 +69,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
+        // Re-assert overlay panels on wake: macOS can reset window levels and
+        // displays may have changed while asleep. Timers also don't fire across
+        // sleep, so this is where we recover the overlay after a lid-open.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(systemDidWake),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
+
         // Initial reconcile
         overlayController?.reconcile(NSScreen.screens)
     }
 
     @objc private func screenParametersDidChange() {
+        DispatchQueue.main.async {
+            self.overlayController?.reconcile(NSScreen.screens)
+        }
+    }
+
+    @objc private func systemDidWake() {
         DispatchQueue.main.async {
             self.overlayController?.reconcile(NSScreen.screens)
         }
