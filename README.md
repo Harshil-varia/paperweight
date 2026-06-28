@@ -16,38 +16,41 @@ A lightweight macOS menu-bar app that lays a calm, paper-like texture overlay on
 - **Accessibility**: Respects "Reduce Transparency" system setting.
 - **Launch at login**: Start automatically on login.
 
-## Build
+## Install
 
-### Install (for people who just received the app)
-
-Paperweight is distributed **unsigned** (it is internal, with no paid Apple
-Developer account), so macOS quarantines it on download. The easiest way to
-install it without fighting Gatekeeper:
-
-**Option A — the installer script (recommended):**
-Download `Paperweight.dmg`, open it, then from the mounted disk run:
+### Homebrew (recommended)
 
 ```bash
-/Volumes/Paperweight/install.sh      # if the DMG ships the script
-# or, if you only have the .app:
-./install.sh /path/to/Paperweight.app
+brew install --cask harshil-varia/paperweight/paperweight
 ```
 
-It copies the app to `/Applications`, clears the quarantine flag, and launches it.
+That's it — Homebrew downloads the latest release, installs it to
+`/Applications`, and clears the Gatekeeper quarantine automatically (the build is
+unsigned, with no paid Apple Developer account). To update or uninstall later:
 
-**Option B — drag-and-drop, then clear quarantine manually:**
-1. Open `Paperweight.dmg` and drag **Paperweight** onto **Applications**.
-2. Run once in Terminal:
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/Paperweight.app
-   open -a Paperweight
-   ```
-
-**Option C — right-click open:** right-click `Paperweight.app` → **Open** →
-**Open** in the dialog (only needed the first time).
+```bash
+brew upgrade --cask paperweight
+brew uninstall --cask paperweight        # add --zap to also remove settings
+```
 
 Paperweight runs in the **menu bar** — there is no Dock icon. Click its glyph to
 open the panel; use **Quit** there (or in Preferences) to stop it.
+
+### Manual (DMG)
+
+Prefer not to use Homebrew? Download `Paperweight.dmg` from the
+[latest release](https://github.com/Harshil-varia/paperweight/releases/latest),
+open it, and either:
+
+- run `/Volumes/Paperweight/install.sh` (copies to `/Applications` and clears
+  quarantine), or
+- drag **Paperweight** onto **Applications**, then run once:
+  `xattr -dr com.apple.quarantine /Applications/Paperweight.app`
+
+(The quarantine step is only needed because the app is unsigned. Alternatively,
+right-click the app → **Open** → **Open** the first time.)
+
+## Build
 
 ### Requirements (to build it yourself)
 
@@ -71,6 +74,17 @@ make install
 - `build/Release/Paperweight.dmg` (installer)
 
 `make install` copies it to `/Applications` and clears quarantine in one step.
+
+### Cutting a release (maintainers)
+
+```bash
+scripts/cut-release.sh 0.1.1
+```
+
+This bumps the version, builds the DMG, publishes a GitHub release, and updates
+the Homebrew cask in the `homebrew-paperweight` tap — so `brew install` and
+`brew upgrade` pick it up. The cask source of truth lives at
+`packaging/homebrew/paperweight.rb`.
 
 ### Signed & Notarized (Optional)
 
