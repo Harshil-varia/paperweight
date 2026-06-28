@@ -18,50 +18,59 @@ A lightweight macOS menu-bar app that lays a calm, paper-like texture overlay on
 
 ## Build
 
-### Requirements
+### Install (for people who just received the app)
+
+Paperweight is distributed **unsigned** (it is internal, with no paid Apple
+Developer account), so macOS quarantines it on download. The easiest way to
+install it without fighting Gatekeeper:
+
+**Option A — the installer script (recommended):**
+Download `Paperweight.dmg`, open it, then from the mounted disk run:
+
+```bash
+/Volumes/Paperweight/install.sh      # if the DMG ships the script
+# or, if you only have the .app:
+./install.sh /path/to/Paperweight.app
+```
+
+It copies the app to `/Applications`, clears the quarantine flag, and launches it.
+
+**Option B — drag-and-drop, then clear quarantine manually:**
+1. Open `Paperweight.dmg` and drag **Paperweight** onto **Applications**.
+2. Run once in Terminal:
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Paperweight.app
+   open -a Paperweight
+   ```
+
+**Option C — right-click open:** right-click `Paperweight.app` → **Open** →
+**Open** in the dialog (only needed the first time).
+
+Paperweight runs in the **menu bar** — there is no Dock icon. Click its glyph to
+open the panel; use **Quit** there (or in Preferences) to stop it.
+
+### Requirements (to build it yourself)
 
 - macOS 13 Ventura or later
 - Xcode 15+
-- Homebrew (for xcodegen)
+- Homebrew (for `xcodegen`; `librsvg` only if you regenerate the icon)
 
-### Local Build (Ad-Hoc Signing)
+### Local Build
 
 ```bash
-# Install xcodegen
+# Install build tool
 brew install xcodegen
 
-# Generate project and build
+# Build a release .app + DMG (ad-hoc signed), then install to /Applications
 make release
+make install
 ```
 
-This produces:
-- `/path/to/build/Release/Paperweight.app` (unsigned, ad-hoc)
-- `/path/to/build/Release/Paperweight.dmg` (installer)
+`make release` produces:
+- `build/Release/Paperweight.app` (ad-hoc signed)
+- `build/Release/Paperweight.dmg` (installer)
 
-### Running Unsigned
-
-```bash
-# Open the built app directly
-open build/Release/Paperweight.app
-
-# Or mount and run from DMG
-open build/Release/Paperweight.dmg
-cd /Volumes/Paperweight
-open Paperweight.app
-```
-
-On first launch, macOS may prompt: "Paperweight cannot be opened because it is from an unidentified developer."
-
-**To bypass:**
-1. Right-click `Paperweight.app` in Finder
-2. Select "Open"
-3. Click "Open" in the dialog
-
-Alternatively, from the terminal:
-```bash
-xattr -d com.apple.quarantine build/Release/Paperweight.app
-open build/Release/Paperweight.app
-```
+`make install` copies it to `/Applications` and clears quarantine in one step.
 
 ### Signed & Notarized (Optional)
 
