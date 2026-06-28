@@ -10,6 +10,8 @@ struct OnboardingView: View {
     /// host via NSHostingController, so we use an explicit completion.
     var onDone: () -> Void = {}
 
+    private let launchAtLoginService = LaunchAtLoginService()
+
     var body: some View {
         VStack(spacing: Theme.spacingL) {
             // Header
@@ -47,7 +49,20 @@ struct OnboardingView: View {
             // Launch at login option
             VStack(alignment: .leading, spacing: Theme.spacingS) {
                 HStack {
-                    Toggle("Open at login", isOn: $coordinator.settings.launchAtLogin)
+                    Toggle("Open at login", isOn: Binding(
+                        get: { coordinator.settings.launchAtLogin },
+                        set: { newValue in
+                            // Actually register with the system; only persist the
+                            // intent on success (the old binding set the flag but
+                            // never called SMAppService, so it did nothing).
+                            do {
+                                try launchAtLoginService.setLaunchAtLogin(newValue)
+                                coordinator.settings.launchAtLogin = newValue
+                            } catch {
+                                Log.lifecycle.error("Onboarding: failed to set launch at login: \(String(describing: error))")
+                            }
+                        }
+                    ))
                         .font(Theme.monoFont(size: 11, weight: .regular))
                         .foregroundColor(Theme.fg)
 

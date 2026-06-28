@@ -107,12 +107,14 @@ struct GeneralTab: View {
                 Toggle("Launch at Login", isOn: Binding(
                     get: { coordinator.settings.launchAtLogin },
                     set: { newValue in
-                        coordinator.settings.launchAtLogin = newValue
+                        // Only persist the intent if the system registration
+                        // actually succeeded, so the toggle never shows "on"
+                        // while the app isn't really registered.
                         do {
                             try launchAtLoginService.setLaunchAtLogin(newValue)
+                            coordinator.settings.launchAtLogin = newValue
                         } catch {
-                            // Log error but don't crash; setting is persisted anyway
-                            NSLog("Failed to set launch at login: %@", error.localizedDescription)
+                            Log.lifecycle.error("Failed to set launch at login: \(String(describing: error))")
                         }
                     }
                 ))
