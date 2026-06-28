@@ -3,8 +3,12 @@ import SwiftUI
 /// First-run onboarding panel: explains the benefit, points at the menu-bar glyph,
 /// introduces Comfort, and offers to enable "Open at login"
 struct OnboardingView: View {
-    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var coordinator: AppCoordinator
+
+    /// Called when the user finishes onboarding, so the host (an AppKit window)
+    /// can close itself. `@Environment(\.dismiss)` does not close a window we
+    /// host via NSHostingController, so we use an explicit completion.
+    var onDone: () -> Void = {}
 
     var body: some View {
         VStack(spacing: Theme.spacingL) {
@@ -67,7 +71,7 @@ struct OnboardingView: View {
                 var updated = coordinator.settings
                 updated.hasSeenOnboarding = true
                 coordinator.settings = updated
-                dismiss()
+                onDone()
             }) {
                 Text("Got it")
                     .font(Theme.monoFont(size: 12, weight: .semibold))

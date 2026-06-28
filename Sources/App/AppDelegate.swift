@@ -19,6 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// unreliable about actually showing/focusing, which is why "Preferences did
     /// nothing". An NSWindow we own and order-front explicitly is dependable.
     private(set) var preferencesWindow: NSWindow?
+    private var onboardingWindow: NSWindow?
 
     override init() {
         self.coordinator = AppCoordinator(engine: engine)
@@ -81,6 +82,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Initial reconcile
         overlayController?.reconcile(NSScreen.screens)
+
+        // First-run onboarding (the previous SwiftUI Window scene was never
+        // opened, so it never appeared).
+        showOnboardingIfNeeded()
+    }
+
+    /// Show the one-time onboarding panel if the user hasn't seen it. Hosted as
+    /// an AppKit window for the same reliability reason as Preferences.
+    private func showOnboardingIfNeeded() {
+        guard !coordinator.settings.hasSeenOnboarding else { return }
+
+        NSApp.activate(ignoringOtherApps: true)
+        let hosting = NSHostingController(
+            rootView: OnboardingView(onDone: { [weak self] in
+                self?.onboardingWindow?.close()
+                self?.onboardingWindow = nil
+            }).environmentObject(coordinator)
+        )
+        let window = NSWindow(contentViewController: hosting)
+        window.styleMask = [.titled, .closable, .fullSizeContentView]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isReleasedWhenClosed = false
+        window.center()
+        onboardingWindow = window
+        window.makeKeyAndOrderFront(nil)
     }
 
     @objc private func screenParametersDidChange() {
