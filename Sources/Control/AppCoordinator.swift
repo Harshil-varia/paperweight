@@ -19,12 +19,30 @@ class AppCoordinator: ObservableObject {
     @Published var settings: Settings {
         didSet {
             recompute()
-            // Save settings to store
-            try? settingsStore.save(settings)
-            // Restart scheduler if schedule changed
-            let newSchedule = settings.schedule
-            scheduler.stop()
-            scheduler.start(with: newSchedule)
+            // Persist; surface failures instead of silently dropping them.
+            do {
+                try settingsStore.save(settings)
+            } catch {
+                Log.settings.error("Failed to save settings: \(String(describing: error))")
+            }
+            // Restart scheduler only when the schedule actually changed, so
+            // unrelated setting tweaks (comfort, texture, snooze feedback) don't
+            // thrash the timer.
+            if settings.schedule != oldValue.schedule {
+                scheduler.stop()
+                scheduler.start(with: settings.schedule)
+            }
+        }
+    }
+
+    /// Run a block on the main thread, immediately if already there. Used by
+    /// background callers (scheduler, snooze timer) so @Published mutations and
+    /// the resulting SwiftUI updates never happen off the main thread.
+    static func runOnMain(_ work: @escaping () -> Void) {
+        if Thread.isMainThread {
+            work()
+        } else {
+            DispatchQueue.main.async(execute: work)
         }
     }
 
