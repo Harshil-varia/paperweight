@@ -10,6 +10,7 @@
 		027FAF1F19989392B908DF58 /* OverlayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F423462C937489C7CC77C014 /* OverlayPanel.swift */; };
 		04E8410C7F8A3322EEAD3A2F /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0239809B99482A014919B813 /* Log.swift */; };
 		04F52E2047C746DC929D91EC /* ReduceTransparencyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E37017352D5EFBDF8E137BB /* ReduceTransparencyMonitor.swift */; };
+		19FFA5543B4B0B59D13DE4F8 /* SnoozeStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63A2825F002B14637F3868D9 /* SnoozeStateTests.swift */; };
 		1B990BA861F8B166BADAC485 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0328053E21DA697B1C015DD2 /* OFL.txt */; };
 		1E20050C06CDC880BE2B9387 /* NoiseDeterminismTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C580FDE3FFD2FF21756519 /* NoiseDeterminismTests.swift */; };
 		201A2D989DA990A35D7D2F2A /* PresetLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2856B1811742CB29093C324 /* PresetLibraryTests.swift */; };
@@ -94,6 +95,7 @@
 		5216170F67B0248D3C4A4830 /* TileSeamlessnessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileSeamlessnessTests.swift; sourceTree = "<group>"; };
 		536ED8A62A01418FBFFF4C3E /* TileCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileCache.swift; sourceTree = "<group>"; };
 		566E21B3BFDCDDB0A5934949 /* SnoozeTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnoozeTimer.swift; sourceTree = "<group>"; };
+		63A2825F002B14637F3868D9 /* SnoozeStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnoozeStateTests.swift; sourceTree = "<group>"; };
 		69A5C175F454EBA927E9B5D7 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		70080C05B6E8AF5E530CAB58 /* SchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulerTests.swift; sourceTree = "<group>"; };
 		704BFACB608101EB7A342DD1 /* LabPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabPanel.swift; sourceTree = "<group>"; };
@@ -179,6 +181,7 @@
 				C2856B1811742CB29093C324 /* PresetLibraryTests.swift */,
 				70080C05B6E8AF5E530CAB58 /* SchedulerTests.swift */,
 				2DE8AB9D591DBEAD51769878 /* SettingsStoreTests.swift */,
+				63A2825F002B14637F3868D9 /* SnoozeStateTests.swift */,
 				28BE5841BE89A0EB6246D365 /* SolarTests.swift */,
 				33FDF5B86ADDFB2378E45310 /* TileCacheTests.swift */,
 				5216170F67B0248D3C4A4830 /* TileSeamlessnessTests.swift */,
@@ -416,6 +419,7 @@
 				201A2D989DA990A35D7D2F2A /* PresetLibraryTests.swift in Sources */,
 				97EAE99BACDD5360A805EDDB /* SchedulerTests.swift in Sources */,
 				B57F6319BBF66FB756EDB8E6 /* SettingsStoreTests.swift in Sources */,
+				19FFA5543B4B0B59D13DE4F8 /* SnoozeStateTests.swift in Sources */,
 				DFFF141A685952146223F6AD /* SolarTests.swift in Sources */,
 				6F73CAACCD2FA28FDC9238FE /* TileCacheTests.swift in Sources */,
 				357726EC32D641514B30D365 /* TileSeamlessnessTests.swift in Sources */,

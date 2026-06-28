@@ -163,6 +163,24 @@ class AppCoordinator: ObservableObject {
         reduceTransparencyMonitor?.stop()
     }
 
+    // MARK: - Snooze
+
+    /// Whether the overlay is currently snoozed (silenced until a future time).
+    var isSnoozed: Bool {
+        guard let until = inputSnoozedUntil else { return false }
+        return Date() < until
+    }
+
+    /// Silence the overlay for the given number of minutes.
+    func snooze(minutes: Int) {
+        snoozeTimer.start(minutes: minutes)
+    }
+
+    /// End an active snooze immediately.
+    func endSnooze() {
+        snoozeTimer.cancel()
+    }
+
     func recompute() {
         let profile = settings.selectedProfile
         let inputs = OverlayInputs(
