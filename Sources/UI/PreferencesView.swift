@@ -14,6 +14,35 @@ struct PreferencesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Top header — app identity and a prominent, always-available Quit.
+            VStack(spacing: Theme.spacingS) {
+                Text("Paperweight")
+                    .font(Theme.monoFont(size: 15, weight: .bold))
+                    .foregroundColor(Theme.fg)
+
+                Button(action: { NSApp.terminate(nil) }) {
+                    HStack(spacing: Theme.spacingXS) {
+                        Image(systemName: "power")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Quit Paperweight")
+                            .font(Theme.monoFont(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(Theme.bg0)
+                    .padding(.vertical, Theme.spacingS)
+                    .padding(.horizontal, Theme.spacingL)
+                    .background(Theme.orange)
+                    .cornerRadius(Theme.cornerRadiusSmall)
+                }
+                .buttonStyle(.plain)
+                .help("Quit Paperweight")
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, Theme.spacingL)
+            .padding(.bottom, Theme.spacingM)
+
+            Divider()
+                .foregroundColor(Theme.bg2)
+
             // Tab picker
             Picker("Tab", selection: $selectedTab) {
                 ForEach(Tab.allCases, id: \.self) { tab in

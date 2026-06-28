@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuBarPanel: View {
     @EnvironmentObject var coordinator: AppCoordinator
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: Theme.spacingM) {
@@ -122,15 +123,20 @@ struct MenuBarPanel: View {
 
             // Footer buttons
             HStack(spacing: Theme.spacingS) {
-                Button("Snooze") {
-                    // Snooze for 20 minutes (Phase 4)
+                Button("Preferences…") {
+                    // Accessory apps must activate before a window will come forward.
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "preferences")
                 }
                 .gruvboxButton()
 
-                Button("Preferences…") {
-                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                Spacer()
+
+                Button("Quit") {
+                    NSApp.terminate(nil)
                 }
                 .gruvboxButton()
+                .help("Quit Paperweight")
             }
         }
         .padding(Theme.spacingL)
