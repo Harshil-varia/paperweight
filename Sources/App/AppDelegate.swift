@@ -80,8 +80,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
-        // Initial reconcile
+        // Initial reconcile, then explicitly paint the current state so the
+        // overlay is visible on first launch regardless of Combine delivery
+        // timing (the $resolved sink also fires, but this makes it certain).
         overlayController?.reconcile(NSScreen.screens)
+        overlayController?.apply(coordinator.resolved)
 
         // First-run onboarding (the previous SwiftUI Window scene was never
         // opened, so it never appeared).
@@ -97,7 +100,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let hosting = NSHostingController(
             rootView: OnboardingView(onDone: { [weak self] in
                 self?.onboardingWindow?.close()
-                self?.onboardingWindow = nil
             }).environmentObject(coordinator)
         )
         let window = NSWindow(contentViewController: hosting)
@@ -107,6 +109,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         window.center()
         onboardingWindow = window
+
+        // Treat ANY close (the red button as well as "Got it") as completing
+        // onboarding, so it is never shown again and the window is released.
+        var token: NSObjectProtocol?
+        token = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            if let token { NotificationCenter.default.removeObserver(token) }
+            guard let self else { return }
+            if !self.coordinator.settings.hasSeenOnboarding {
+                self.coordinator.settings.hasSeenOnboarding = true
+            }
+            self.onboardingWindow = nil
+        }
+
         window.makeKeyAndOrderFront(nil)
     }
 

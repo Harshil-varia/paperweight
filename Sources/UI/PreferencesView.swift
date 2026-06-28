@@ -545,7 +545,10 @@ struct ScheduleTab: View {
                         .foregroundColor(Theme.fg2)
                         .frame(width: 70, alignment: .leading)
                     DatePicker("", selection: timeBinding(hour: fromHour, minute: fromMinute) { h, m in
-                        update(.manual(fromHour: h, fromMinute: m, toHour: toHour, toMinute: toMinute))
+                        // Read the sibling "to" fields fresh so a rapid edit of
+                        // both fields can't write a stale value.
+                        guard case let .manual(_, _, th, tm) = coordinator.settings.schedule else { return }
+                        update(.manual(fromHour: h, fromMinute: m, toHour: th, toMinute: tm))
                     }, displayedComponents: .hourAndMinute)
                     .labelsHidden()
                 }
@@ -555,7 +558,8 @@ struct ScheduleTab: View {
                         .foregroundColor(Theme.fg2)
                         .frame(width: 70, alignment: .leading)
                     DatePicker("", selection: timeBinding(hour: toHour, minute: toMinute) { h, m in
-                        update(.manual(fromHour: fromHour, fromMinute: fromMinute, toHour: h, toMinute: m))
+                        guard case let .manual(fh, fm, _, _) = coordinator.settings.schedule else { return }
+                        update(.manual(fromHour: fh, fromMinute: fm, toHour: h, toMinute: m))
                     }, displayedComponents: .hourAndMinute)
                     .labelsHidden()
                 }
@@ -593,7 +597,10 @@ struct ScheduleTab: View {
                         .frame(width: 80, alignment: .leading)
                     TextField("", value: Binding(
                         get: { latitude },
-                        set: { update(.solar(latitude: clampLatitude($0), longitude: longitude)) }
+                        set: { newLat in
+                            guard case let .solar(_, lon) = coordinator.settings.schedule else { return }
+                            update(.solar(latitude: clampLatitude(newLat), longitude: lon))
+                        }
                     ), format: .number)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 120)
@@ -605,7 +612,10 @@ struct ScheduleTab: View {
                         .frame(width: 80, alignment: .leading)
                     TextField("", value: Binding(
                         get: { longitude },
-                        set: { update(.solar(latitude: latitude, longitude: clampLongitude($0))) }
+                        set: { newLon in
+                            guard case let .solar(lat, _) = coordinator.settings.schedule else { return }
+                            update(.solar(latitude: lat, longitude: clampLongitude(newLon)))
+                        }
                     ), format: .number)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 120)
