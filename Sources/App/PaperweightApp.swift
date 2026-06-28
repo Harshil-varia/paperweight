@@ -13,10 +13,8 @@ struct PaperweightApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Preferences", id: "preferences") {
-            PreferencesView()
-                .environmentObject(appDelegate.coordinator)
-        }
+        // Preferences is an AppKit window owned by AppDelegate (reliable from a
+        // menu-bar/accessory app); see AppDelegate.showPreferences().
 
         Window("Onboarding", id: "onboarding") {
             OnboardingView()

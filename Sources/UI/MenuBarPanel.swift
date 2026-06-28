@@ -2,7 +2,6 @@ import SwiftUI
 
 struct MenuBarPanel: View {
     @EnvironmentObject var coordinator: AppCoordinator
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: Theme.spacingM) {
@@ -124,9 +123,8 @@ struct MenuBarPanel: View {
             // Footer buttons
             HStack(spacing: Theme.spacingS) {
                 Button("Preferences…") {
-                    // Accessory apps must activate before a window will come forward.
-                    NSApp.activate(ignoringOtherApps: true)
-                    openWindow(id: "preferences")
+                    // Handled by AppDelegate, which owns the Preferences NSWindow.
+                    NotificationCenter.default.post(name: .paperweightShowPreferences, object: nil)
                 }
                 .gruvboxButton()
 

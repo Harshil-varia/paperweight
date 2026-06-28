@@ -1,5 +1,11 @@
 import AppKit
 import Combine
+import SwiftUI
+
+extension Notification.Name {
+    /// Posted by the menu-bar panel to open the Preferences window.
+    static let paperweightShowPreferences = Notification.Name("PaperweightShowPreferences")
+}
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -7,6 +13,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let coordinator: AppCoordinator
     var overlayController: OverlayController?
     private var cancellables = Set<AnyCancellable>()
+
+    /// Preferences is an AppKit-hosted window rather than a SwiftUI `Window`
+    /// scene: `openWindow` from a `MenuBarExtra` in an `.accessory` app is
+    /// unreliable about actually showing/focusing, which is why "Preferences did
+    /// nothing". An NSWindow we own and order-front explicitly is dependable.
+    private(set) var preferencesWindow: NSWindow?
 
     override init() {
         self.coordinator = AppCoordinator(engine: engine)
@@ -49,6 +61,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
+        // Open Preferences when the menu-bar panel asks for it.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(showPreferences),
+            name: .paperweightShowPreferences,
+            object: nil
+        )
+
         // Initial reconcile
         overlayController?.reconcile(NSScreen.screens)
     }
@@ -57,6 +77,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             self.overlayController?.reconcile(NSScreen.screens)
         }
+    }
+
+    /// Show (creating once, then reusing) the Preferences window and bring it to
+    /// the front. `.accessory` apps must activate first or the window opens
+    /// behind everything.
+    @objc func showPreferences() {
+        NSApp.activate(ignoringOtherApps: true)
+
+        if let window = preferencesWindow {
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let hosting = NSHostingController(
+            rootView: PreferencesView().environmentObject(coordinator)
+        )
+        let window = NSWindow(contentViewController: hosting)
+        window.title = "Paperweight Preferences"
+        window.styleMask = [.titled, .closable, .miniaturizable]
+        window.isReleasedWhenClosed = false
+        window.center()
+        preferencesWindow = window
+        window.makeKeyAndOrderFront(nil)
     }
 
     /// True when running inside the XCTest host, where the instance guard and
