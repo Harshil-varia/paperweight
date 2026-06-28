@@ -189,12 +189,15 @@ struct GeneralTab: View {
                     .tracking(0.02)
 
                 VStack(alignment: .leading, spacing: Theme.spacingS) {
-                    ForEach(NSScreen.screens, id: \.self) { screen in
-                        let displayID = String(NSScreen.screens.firstIndex(of: screen) ?? 0)
+                    ForEach(Array(NSScreen.screens.enumerated()), id: \.element) { index, screen in
+                        // Key by the STABLE display ID, not the array index, so a
+                        // toggle always maps to the same physical monitor even if
+                        // displays are added/removed/reordered.
+                        let displayID = String(screen.displayID)
                         let displaySetting = coordinator.settings.perDisplay[displayID] ?? DisplaySetting()
 
                         HStack {
-                            Text("Display \((NSScreen.screens.firstIndex(of: screen) ?? 0) + 1)")
+                            Text("Display \(index + 1)")
                                 .font(Theme.monoFont(size: 11))
                                 .foregroundColor(Theme.fg4)
 

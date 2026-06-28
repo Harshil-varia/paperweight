@@ -36,6 +36,7 @@
 		A2D7E6B40390394B37AD6FEA /* OverlayResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = EECFEE83BDE6D2A50C4685DD /* OverlayResolver.swift */; };
 		B203149E84715F83FED46B3A /* OverlayResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366504CFED8E49901D661604 /* OverlayResolverTests.swift */; };
 		B57F6319BBF66FB756EDB8E6 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE8AB9D591DBEAD51769878 /* SettingsStoreTests.swift */; };
+		BAD8CB740EC38B54675B52D3 /* NSScreen+DisplayID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A4959B14CCB2CD4054AD6E /* NSScreen+DisplayID.swift */; };
 		C33C3BD8D5A41FA3A808BDEF /* Scheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D60C7708F55E1A3A614919 /* Scheduler.swift */; };
 		C9736AF45717EFC7AF058C73 /* MenuBarPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D038274EA6E926A40B454DB /* MenuBarPanel.swift */; };
 		C976DADB133B010B5C761FE5 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69A5C175F454EBA927E9B5D7 /* Settings.swift */; };
@@ -115,6 +116,7 @@
 		EECFEE83BDE6D2A50C4685DD /* OverlayResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayResolver.swift; sourceTree = "<group>"; };
 		F342501D2F21377CEB5B9588 /* TextureProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextureProfile.swift; sourceTree = "<group>"; };
 		F423462C937489C7CC77C014 /* OverlayPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPanel.swift; sourceTree = "<group>"; };
+		F5A4959B14CCB2CD4054AD6E /* NSScreen+DisplayID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSScreen+DisplayID.swift"; sourceTree = "<group>"; };
 		F5F906CCD1EC4547093952C7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F99179224BA9E6B892EB2E62 /* OverlayLayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayLayerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -220,6 +222,7 @@
 		9F6F07788182B36FF064E0EC /* Overlay */ = {
 			isa = PBXGroup;
 			children = (
+				F5A4959B14CCB2CD4054AD6E /* NSScreen+DisplayID.swift */,
 				CFD02B3FE2896CE5BEB499D0 /* OverlayController.swift */,
 				F99179224BA9E6B892EB2E62 /* OverlayLayerView.swift */,
 				F423462C937489C7CC77C014 /* OverlayPanel.swift */,
@@ -364,6 +367,7 @@
 				E9D34C41ED047AEDCC056466 /* LaunchAtLoginService.swift in Sources */,
 				C9736AF45717EFC7AF058C73 /* MenuBarPanel.swift in Sources */,
 				80E8C4D02B5FFD913C717CE2 /* MetalNoiseGenerator.swift in Sources */,
+				BAD8CB740EC38B54675B52D3 /* NSScreen+DisplayID.swift in Sources */,
 				225B291A007814C6CBF407D3 /* Onboarding.swift in Sources */,
 				67CBE41A6B3564E3CDB39175 /* OverlayController.swift in Sources */,
 				CAC4BCE42C02D8A743EEB9EB /* OverlayLayerView.swift in Sources */,
