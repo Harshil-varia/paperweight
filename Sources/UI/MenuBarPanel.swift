@@ -120,17 +120,52 @@ struct MenuBarPanel: View {
             .border(Theme.bg1, width: 0.5)
             .cornerRadius(Theme.cornerRadiusSmall)
 
+            // Snooze control
+            if coordinator.isSnoozed {
+                Button(action: { coordinator.endSnooze() }) {
+                    HStack(spacing: Theme.spacingS) {
+                        Image(systemName: "moon.zzz.fill")
+                            .font(.system(size: 11))
+                        Text("Snoozed — Resume now")
+                            .font(Theme.monoFont(size: 11, weight: .semibold))
+                        Spacer()
+                    }
+                    .foregroundColor(Theme.bg0)
+                    .padding(.vertical, Theme.spacingS)
+                    .padding(.horizontal, Theme.spacingM)
+                    .background(Theme.yellow)
+                    .cornerRadius(Theme.cornerRadiusSmall)
+                }
+                .buttonStyle(.plain)
+            } else {
+                HStack(spacing: Theme.spacingS) {
+                    Text("SNOOZE")
+                        .font(Theme.monoFont(size: 11, weight: .bold))
+                        .foregroundColor(Theme.fg4)
+                        .tracking(0.04)
+                    Spacer()
+                    Button("20m") { coordinator.snooze(minutes: 20) }
+                        .gruvboxButton()
+                    Button("1h") { coordinator.snooze(minutes: 60) }
+                        .gruvboxButton()
+                }
+            }
+
             // Footer buttons
             HStack(spacing: Theme.spacingS) {
-                Button("Snooze") {
-                    // Snooze for 20 minutes (Phase 4)
+                Button("Preferences…") {
+                    // Handled by AppDelegate, which owns the Preferences NSWindow.
+                    NotificationCenter.default.post(name: .paperweightShowPreferences, object: nil)
                 }
                 .gruvboxButton()
 
-                Button("Preferences…") {
-                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                Spacer()
+
+                Button("Quit") {
+                    NSApp.terminate(nil)
                 }
                 .gruvboxButton()
+                .help("Quit Paperweight")
             }
         }
         .padding(Theme.spacingL)

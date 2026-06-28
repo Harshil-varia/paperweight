@@ -3,8 +3,14 @@ import SwiftUI
 /// First-run onboarding panel: explains the benefit, points at the menu-bar glyph,
 /// introduces Comfort, and offers to enable "Open at login"
 struct OnboardingView: View {
-    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var coordinator: AppCoordinator
+
+    /// Called when the user finishes onboarding, so the host (an AppKit window)
+    /// can close itself. `@Environment(\.dismiss)` does not close a window we
+    /// host via NSHostingController, so we use an explicit completion.
+    var onDone: () -> Void = {}
+
+    private let launchAtLoginService = LaunchAtLoginService()
 
     var body: some View {
         VStack(spacing: Theme.spacingL) {
@@ -43,7 +49,20 @@ struct OnboardingView: View {
             // Launch at login option
             VStack(alignment: .leading, spacing: Theme.spacingS) {
                 HStack {
-                    Toggle("Open at login", isOn: $coordinator.settings.launchAtLogin)
+                    Toggle("Open at login", isOn: Binding(
+                        get: { coordinator.settings.launchAtLogin },
+                        set: { newValue in
+                            // Actually register with the system; only persist the
+                            // intent on success (the old binding set the flag but
+                            // never called SMAppService, so it did nothing).
+                            do {
+                                try launchAtLoginService.setLaunchAtLogin(newValue)
+                                coordinator.settings.launchAtLogin = newValue
+                            } catch {
+                                Log.lifecycle.error("Onboarding: failed to set launch at login: \(String(describing: error))")
+                            }
+                        }
+                    ))
                         .font(Theme.monoFont(size: 11, weight: .regular))
                         .foregroundColor(Theme.fg)
 
@@ -67,7 +86,7 @@ struct OnboardingView: View {
                 var updated = coordinator.settings
                 updated.hasSeenOnboarding = true
                 coordinator.settings = updated
-                dismiss()
+                onDone()
             }) {
                 Text("Got it")
                     .font(Theme.monoFont(size: 12, weight: .semibold))

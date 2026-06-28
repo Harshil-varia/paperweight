@@ -62,10 +62,14 @@ class TextureEngine: TextureProviding {
 
         // Fall back to Core Image
         if let tile = fallbackGenerator.tile(for: profile, scale: scale) {
+            Log.engine.notice("Metal tile generation failed for \(profile.name, privacy: .public); used Core Image fallback")
             cache.set(cacheKey, value: tile)
             return tile
         }
 
+        // Both paths failed: the overlay will fall back to a flat matte. Log it
+        // so a vanished/plain overlay is diagnosable rather than mysterious.
+        Log.engine.error("Tile generation failed for \(profile.name, privacy: .public) at scale \(scale); overlay falls back to flat matte")
         return nil
     }
 }

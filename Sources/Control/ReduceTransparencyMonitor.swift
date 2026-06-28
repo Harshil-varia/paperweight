@@ -32,13 +32,13 @@ class ReduceTransparencyMonitor: ReduceTransparencyMonitoring {
         stop()
     }
 
-    /// Update reduce transparency status
+    /// Update reduce transparency status from the real accessibility API.
+    /// (The previous implementation read `AppleReduceTransparencyEnabled` from
+    /// the app's standard UserDefaults, which never reflects the global setting —
+    /// so the feature was effectively dead.)
     private func updateReduceTransparency() {
         guard let coordinator = coordinator else { return }
-        // Check the system's reduce transparency setting
-        // This is a proxy for the Accessibility > Display > Increase Transparency setting
-        let defaults = UserDefaults.standard
-        let reduceTransparency = defaults.bool(forKey: "AppleReduceTransparencyEnabled")
-        coordinator.inputReduceTransparency = reduceTransparency
+        coordinator.inputReduceTransparency =
+            NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
     }
 }
