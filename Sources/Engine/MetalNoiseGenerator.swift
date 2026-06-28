@@ -325,7 +325,12 @@ class MetalNoiseGenerator: TextureGenerating {
 
         // Compile the shader source at runtime
         let compileOptions = MTLCompileOptions()
-        guard let library = try? device.makeLibrary(source: shaderSource, options: compileOptions) else {
+        let library: MTLLibrary
+        do {
+            library = try device.makeLibrary(source: shaderSource, options: compileOptions)
+        } catch {
+            // Log so a silent fall-through to the Core Image path is diagnosable.
+            Log.engine.error("Metal shader compilation failed: \(String(describing: error))")
             return nil
         }
 

@@ -16,6 +16,7 @@ targets:
       - path: Sources/Overlay
       - path: Sources/Engine
       - path: Sources/UI
+      - path: Sources/Support
       # Resources live under `sources` — XcodeGen has no separate `resources`
       # key and auto-assigns build phases by file type.
       - path: Resources/Assets.xcassets   # compiled by actool → Assets.car + AppIcon

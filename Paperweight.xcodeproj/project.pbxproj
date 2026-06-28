@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		027FAF1F19989392B908DF58 /* OverlayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F423462C937489C7CC77C014 /* OverlayPanel.swift */; };
+		04E8410C7F8A3322EEAD3A2F /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0239809B99482A014919B813 /* Log.swift */; };
 		04F52E2047C746DC929D91EC /* ReduceTransparencyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E37017352D5EFBDF8E137BB /* ReduceTransparencyMonitor.swift */; };
 		1B990BA861F8B166BADAC485 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0328053E21DA697B1C015DD2 /* OFL.txt */; };
 		1E20050C06CDC880BE2B9387 /* NoiseDeterminismTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C580FDE3FFD2FF21756519 /* NoiseDeterminismTests.swift */; };
@@ -68,6 +69,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0239809B99482A014919B813 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		0328053E21DA697B1C015DD2 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		08CCF9E55BC1E326E441A1A4 /* PaperweightApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperweightApp.swift; sourceTree = "<group>"; };
 		164E1E5474D037789F7F77C9 /* PowerMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerMonitor.swift; sourceTree = "<group>"; };
@@ -204,6 +206,7 @@
 				85836EDD3B7E9DB6EBBEF71C /* Engine */,
 				9F6F07788182B36FF064E0EC /* Overlay */,
 				2ABB511E3F8813A435CDEB7C /* Settings */,
+				C363DBB6A4987CDBA7643B46 /* Support */,
 				10D9BE2C58683BA79C4B39FF /* UI */,
 			);
 			path = Sources;
@@ -244,6 +247,14 @@
 				4D8F5D51503892ACB3C46714 /* SolarCalculator.swift */,
 			);
 			path = Control;
+			sourceTree = "<group>";
+		};
+		C363DBB6A4987CDBA7643B46 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				0239809B99482A014919B813 /* Log.swift */,
+			);
+			path = Support;
 			sourceTree = "<group>";
 		};
 		D4EC88F7B965CFCE7C2DF345 /* Fonts */ = {
@@ -365,6 +376,7 @@
 				C9813A36A3D583D1517C6ADA /* FontRegistrar.swift in Sources */,
 				93C0FEAD51940BA36B70D427 /* LabPanel.swift in Sources */,
 				E9D34C41ED047AEDCC056466 /* LaunchAtLoginService.swift in Sources */,
+				04E8410C7F8A3322EEAD3A2F /* Log.swift in Sources */,
 				C9736AF45717EFC7AF058C73 /* MenuBarPanel.swift in Sources */,
 				80E8C4D02B5FFD913C717CE2 /* MetalNoiseGenerator.swift in Sources */,
 				BAD8CB740EC38B54675B52D3 /* NSScreen+DisplayID.swift in Sources */,
