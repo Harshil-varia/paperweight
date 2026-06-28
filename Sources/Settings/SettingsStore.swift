@@ -24,7 +24,10 @@ class SettingsStore: SettingsStoring {
             let settings = try decoder.decode(Settings.self, from: data)
             return migrate(settings)
         } catch {
-            print("Failed to decode settings: \(error)")
+            // Resilient decoding means this only triggers on genuinely corrupt
+            // data, not on older blobs missing newer fields. Surface it rather
+            // than silently resetting all preferences with no trace.
+            Log.settings.error("Failed to decode settings, using defaults: \(String(describing: error))")
             return Settings()
         }
     }
@@ -47,25 +50,14 @@ class SettingsStore: SettingsStoring {
     private func migrate(_ settings: Settings) -> Settings {
         var result = settings
 
-        // v1 → v2: add schedule field (default to .off if not present)
-        if result.schemaVersion < 2 {
-            result.schedule = .off
-            result.schemaVersion = 2
-        }
-
-        // v2 → v3: add ambient input fields with sensible defaults
-        if result.schemaVersion < 3 {
-            // Seed sensible exclusion defaults (Finder, Safari, etc.)
-            result.exclusions = [
-                "com.apple.finder",
-                "com.apple.Safari",
-                "com.google.Chrome"
-            ]
-            result.pauseOnBattery = false
-            result.launchAtLogin = false
-            result.reduceTransparencyResponse = .stepDown
-            result.perDisplay = [:]
-            result.schemaVersion = 3
+        // Fields added across versions (schedule, ambient inputs) are filled by
+        // Settings' resilient decoder when missing, so migration must NEVER
+        // overwrite decoded values — doing so previously wiped users' custom
+        // exclusions on upgrade. Earlier builds also auto-seeded browsers
+        // (Safari/Chrome/Finder) as exclusions, which turned the overlay OFF
+        // during normal browsing; the default is now empty (opt-in).
+        if result.schemaVersion < Settings.currentSchemaVersion {
+            result.schemaVersion = Settings.currentSchemaVersion
         }
 
         return result

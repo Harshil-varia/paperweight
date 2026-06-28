@@ -94,7 +94,7 @@ class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(migrated.comfort, v1Components.comfort, "comfort should be preserved")
         XCTAssertEqual(migrated.schedule, .off, "schedule should default to .off in v2")
         // Verify Phase 5 fields are initialized
-        XCTAssertFalse(migrated.exclusions.isEmpty, "exclusions should be seeded with defaults")
+        XCTAssertTrue(migrated.exclusions.isEmpty, "exclusions default to empty (opt-in, no browser auto-hide)")
         XCTAssertFalse(migrated.pauseOnBattery, "pauseOnBattery should default to false")
         XCTAssertFalse(migrated.launchAtLogin, "launchAtLogin should default to false")
     }
@@ -116,7 +116,7 @@ class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(loaded.schemaVersion, 3, "v2 should be auto-migrated to v3")
         XCTAssertEqual(loaded.schedule, .manual(fromHour: 9, fromMinute: 0, toHour: 17, toMinute: 0))
         // Verify Phase 5 fields are initialized
-        XCTAssertFalse(loaded.exclusions.isEmpty, "exclusions should be seeded")
+        XCTAssertTrue(loaded.exclusions.isEmpty, "exclusions default to empty (opt-in)")
     }
 
     func testRoundTripV2SettingsWithSolarScheduleMigratestoV3() {
@@ -141,7 +141,7 @@ class SettingsStoreTests: XCTestCase {
             XCTFail("Expected solar schedule")
         }
         // Verify Phase 5 fields are initialized
-        XCTAssertFalse(loaded.exclusions.isEmpty, "exclusions should be seeded")
+        XCTAssertTrue(loaded.exclusions.isEmpty, "exclusions default to empty (opt-in)")
     }
 
     // MARK: - Phase 5: v2→v3 Migration Tests
@@ -177,7 +177,7 @@ class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(migrated.schedule, v2Components.schedule, "schedule should be preserved")
 
         // Verify Phase 5 fields are initialized
-        XCTAssertFalse(migrated.exclusions.isEmpty, "exclusions should be seeded with defaults")
+        XCTAssertTrue(migrated.exclusions.isEmpty, "exclusions default to empty (opt-in, no browser auto-hide)")
         XCTAssertFalse(migrated.pauseOnBattery, "pauseOnBattery should default to false")
         XCTAssertFalse(migrated.launchAtLogin, "launchAtLogin should default to false")
         XCTAssertEqual(migrated.reduceTransparencyResponse, .stepDown, "reduceTransparencyResponse should default to stepDown")
@@ -246,9 +246,10 @@ class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(loaded.exclusions.contains("com.apple.Safari"))
     }
 
-    func testMigrationSeededExclusionDefaults() {
-        // When v2→v3 migration runs, it should seed sensible exclusion defaults
-        var v2Settings = Settings(schemaVersion: 2)
+    func testMigrationDoesNotSeedBrowserExclusions() {
+        // Migration must NOT auto-add browsers as exclusions — that would hide
+        // the overlay during normal browsing. The default is empty (opt-in).
+        let v2Settings = Settings(schemaVersion: 2)
         let encoder = JSONEncoder()
         guard let v2Data = try? encoder.encode(v2Settings) else {
             XCTFail("Failed to encode v2 settings")
@@ -260,10 +261,31 @@ class SettingsStoreTests: XCTestCase {
         let store = SettingsStore(userDefaults: userDefaults)
         let migrated = store.load()
 
-        // Check that defaults include common applications
-        XCTAssertTrue(migrated.exclusions.contains("com.apple.finder"))
-        XCTAssertTrue(migrated.exclusions.contains("com.apple.Safari"))
-        XCTAssertTrue(migrated.exclusions.contains("com.google.Chrome"))
+        XCTAssertTrue(migrated.exclusions.isEmpty, "migration must not seed exclusions")
+        XCTAssertEqual(migrated.schemaVersion, 3)
+    }
+
+    func testDecodingOlderBlobMissingFieldsKeepsPresentValuesAndDefaultsRest() {
+        // An old build's JSON that predates several fields must decode without
+        // throwing, preserving the values it DOES have and defaulting the rest —
+        // rather than failing to decode and wiping every preference.
+        let legacyJSON = """
+        { "schemaVersion": 1, "isEnabled": false, "selectedProfileID": "blueprint", "comfort": 0.83 }
+        """.data(using: .utf8)!
+        userDefaults.set(legacyJSON, forKey: "com.humanlayer.paperweight.settings")
+
+        let store = SettingsStore(userDefaults: userDefaults)
+        let loaded = store.load()
+
+        // Present fields preserved
+        XCTAssertFalse(loaded.isEnabled)
+        XCTAssertEqual(loaded.selectedProfileID, "blueprint")
+        XCTAssertEqual(loaded.comfort, 0.83, accuracy: 0.001)
+        // Missing fields defaulted (not a decode failure → not reset to ALL defaults)
+        XCTAssertEqual(loaded.schedule, .off)
+        XCTAssertTrue(loaded.exclusions.isEmpty)
+        XCTAssertEqual(loaded.reduceTransparencyResponse, .stepDown)
+        XCTAssertEqual(loaded.schemaVersion, 3, "stamped to current schema")
     }
 }
 

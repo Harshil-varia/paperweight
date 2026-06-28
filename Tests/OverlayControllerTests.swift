@@ -11,7 +11,7 @@ class OverlayControllerTests: XCTestCase {
         controller.reconcile([screen])
 
         // Verify panel was created
-        XCTAssertEqual(controller.getPanelCount(), 1)
+        XCTAssertEqual(controller.panelCount, 1)
     }
 
     @MainActor
@@ -22,7 +22,7 @@ class OverlayControllerTests: XCTestCase {
 
         controller.reconcile([screen1, screen2])
 
-        XCTAssertEqual(controller.getPanelCount(), 2)
+        XCTAssertEqual(controller.panelCount, 2)
     }
 
     @MainActor
@@ -33,11 +33,11 @@ class OverlayControllerTests: XCTestCase {
 
         // First reconcile with 2 screens
         controller.reconcile([screen1, screen2])
-        XCTAssertEqual(controller.getPanelCount(), 2)
+        XCTAssertEqual(controller.panelCount, 2)
 
         // Then reconcile with 1 screen (screen2 disconnected)
         controller.reconcile([screen1])
-        XCTAssertEqual(controller.getPanelCount(), 1)
+        XCTAssertEqual(controller.panelCount, 1)
     }
 
     @MainActor
@@ -47,13 +47,29 @@ class OverlayControllerTests: XCTestCase {
         let screen2 = FakeScreen(displayID: 2, frame: NSRect(x: 1920, y: 0, width: 1920, height: 1080))
 
         controller.reconcile([screen1, screen2])
-        XCTAssertEqual(controller.getPanelCount(), 2)
+        XCTAssertEqual(controller.panelCount, 2)
 
         // Reorder and add a third screen
         let screen3 = FakeScreen(displayID: 3, frame: NSRect(x: 3840, y: 0, width: 1920, height: 1080))
         controller.reconcile([screen2, screen1, screen3])
 
-        XCTAssertEqual(controller.getPanelCount(), 3)
+        XCTAssertEqual(controller.panelCount, 3)
+    }
+
+    @MainActor
+    func testReorderingKeepsTheSamePanelInstancesPerDisplay() {
+        // Panels are keyed by stable display ID, so reordering the screens array
+        // must NOT recreate panels (which would flash/misattribute state).
+        let controller = OverlayController()
+        let a = FakeScreen(displayID: 10, frame: NSRect(x: 0, y: 0, width: 1920, height: 1080))
+        let b = FakeScreen(displayID: 20, frame: NSRect(x: 1920, y: 0, width: 1920, height: 1080))
+
+        controller.reconcile([a, b])
+        let idsAfterFirst = controller.panelDisplayIDs
+
+        controller.reconcile([b, a]) // same displays, reordered
+        XCTAssertEqual(controller.panelDisplayIDs, idsAfterFirst)
+        XCTAssertEqual(controller.panelCount, 2)
     }
 
     @MainActor
@@ -78,9 +94,11 @@ class OverlayControllerTests: XCTestCase {
 
 class FakeScreen: NSScreen {
     let screenFrame: NSRect
+    let fakeDisplayID: Int
 
     init(displayID: Int, frame: NSRect) {
         self.screenFrame = frame
+        self.fakeDisplayID = displayID
         super.init()
     }
 
@@ -92,18 +110,25 @@ class FakeScreen: NSScreen {
     override var frame: NSRect {
         screenFrame
     }
+
+    override var backingScaleFactor: CGFloat { 2.0 }
+
+    // Drives NSScreen.displayID so tests exercise the real stable-ID code path.
+    override var deviceDescription: [NSDeviceDescriptionKey: Any] {
+        [NSDeviceDescriptionKey("NSScreenNumber"): NSNumber(value: fakeDisplayID)]
+    }
 }
 
-// MARK: - Controller Test Helper
+// MARK: - Controller Test Helpers
 
 extension OverlayController {
-    func getPanelCount() -> Int {
-        // Access private panels via reflection for testing
+    /// Stable display IDs of the live panels (sorted for stable comparison).
+    var panelDisplayIDs: [CGDirectDisplayID] {
         let mirror = Mirror(reflecting: self)
-        if let panelsChild = mirror.children.first(where: { $0.label == "panels" }),
-           let panels = panelsChild.value as? [Int: OverlayPanel] {
-            return panels.count
+        if let child = mirror.children.first(where: { $0.label == "panels" }),
+           let panels = child.value as? [CGDirectDisplayID: OverlayPanel] {
+            return panels.keys.sorted()
         }
-        return 0
+        return []
     }
 }

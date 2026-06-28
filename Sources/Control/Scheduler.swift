@@ -267,9 +267,12 @@ final class Scheduler: @unchecked Sendable {
 // MARK: - AppCoordinator extension
 
 extension AppCoordinator {
-    /// Update the scheduler active state from the scheduler
+    /// Update the scheduler active state from the scheduler. The scheduler fires
+    /// on a background queue, so hop to main before touching @Published state
+    /// (the didSet on `inputScheduleActive` runs recompute()).
     func update(scheduleActive: Bool) {
-        inputScheduleActive = scheduleActive
-        recompute()
+        AppCoordinator.runOnMain { [weak self] in
+            self?.inputScheduleActive = scheduleActive
+        }
     }
 }

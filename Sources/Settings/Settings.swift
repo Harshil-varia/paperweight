@@ -78,6 +78,10 @@ struct DisplaySetting: Codable, Equatable {
 typealias DisplayID = String
 
 struct Settings: Codable, Equatable {
+    /// The schema version this build writes. Bump when adding fields that need
+    /// migration handling.
+    static let currentSchemaVersion = 3
+
     var schemaVersion: Int = 3
     var isEnabled: Bool = true
     var selectedProfileID: String = "eink-calm"  // Default to E-Ink Calm in Phase 2
@@ -136,6 +140,26 @@ struct Settings: Codable, Equatable {
         self.reduceTransparencyResponse = reduceTransparencyResponse
         self.perDisplay = perDisplay
         self.hasSeenOnboarding = hasSeenOnboarding
+    }
+
+    /// Resilient decoding: any field missing from an older on-disk blob falls
+    /// back to its default instead of throwing. Without this, adding a field
+    /// makes the whole settings file fail to decode, silently wiping ALL of a
+    /// user's preferences on upgrade.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = Settings()
+        schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? d.schemaVersion
+        isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? d.isEnabled
+        selectedProfileID = try c.decodeIfPresent(String.self, forKey: .selectedProfileID) ?? d.selectedProfileID
+        comfort = try c.decodeIfPresent(Float.self, forKey: .comfort) ?? d.comfort
+        schedule = try c.decodeIfPresent(ScheduleConfig.self, forKey: .schedule) ?? d.schedule
+        exclusions = try c.decodeIfPresent([String].self, forKey: .exclusions) ?? d.exclusions
+        pauseOnBattery = try c.decodeIfPresent(Bool.self, forKey: .pauseOnBattery) ?? d.pauseOnBattery
+        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? d.launchAtLogin
+        reduceTransparencyResponse = try c.decodeIfPresent(ReduceTransparencyResponse.self, forKey: .reduceTransparencyResponse) ?? d.reduceTransparencyResponse
+        perDisplay = try c.decodeIfPresent([DisplayID: DisplaySetting].self, forKey: .perDisplay) ?? d.perDisplay
+        hasSeenOnboarding = try c.decodeIfPresent(Bool.self, forKey: .hasSeenOnboarding) ?? d.hasSeenOnboarding
     }
 
     /// Get the selected TextureProfile by ID

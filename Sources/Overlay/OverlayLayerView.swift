@@ -24,13 +24,18 @@ class OverlayLayerView: NSView {
         overlayLayer.frame = bounds
     }
 
+    /// The most recently applied tile, kept so the pattern can be rebuilt at the
+    /// correct density if the window moves to a display with a different scale.
+    private var currentTile: TileImage?
+
     func apply(_ resolved: ResolvedOverlay, tile: TileImage?) {
+        currentTile = resolved.isVisible ? tile : currentTile
+
         if resolved.isVisible {
-            // Phase 2: use tile image directly if available, fallback to flat matte
             if let tile = tile {
                 applyTileImage(tile, opacity: resolved.effectiveOpacity, blendMode: resolved.profile.blendMode)
             } else {
-                // Fallback to flat matte if no tile available
+                // Fallback to flat matte if no tile is available.
                 applyFlatMatte(opacity: resolved.effectiveOpacity)
             }
         } else {
@@ -39,6 +44,7 @@ class OverlayLayerView: NSView {
     }
 
     private func applyFlatMatte(opacity: Float) {
+        overlayLayer.contents = nil
         overlayLayer.backgroundColor = NSColor(
             red: 0.8,
             green: 0.8,
@@ -50,23 +56,38 @@ class OverlayLayerView: NSView {
     }
 
     private func applyTileImage(_ tile: TileImage, opacity: Float, blendMode: BlendMode) {
-        // Set the tile image as the layer's contents
-        overlayLayer.contents = tile.cgImage
+        let scale = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2.0
 
-        // Configure the layer to repeat the tile
-        overlayLayer.contentsGravity = .topLeft
-        overlayLayer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2.0
-
-        // Set opacity and blend mode
+        // Repeat the seamless tile across the ENTIRE layer via a pattern-colored
+        // background. `contents` only paints one copy (any gravity), which is what
+        // left the overlay covering a single tile-sized patch; a pattern fill tiles
+        // the small texture on the GPU and never allocates a full-screen bitmap, so
+        // memory stays flat. Sizing the NSImage in points (pixels ÷ scale) maps one
+        // tile pixel to one physical pixel, keeping the grain crisp on Retina.
+        overlayLayer.contents = nil
+        overlayLayer.contentsScale = scale
+        overlayLayer.backgroundColor = OverlayLayerView.tilePatternColor(for: tile, scale: scale).cgColor
         overlayLayer.opacity = opacity
         overlayLayer.compositingFilter = blendMode.compositingFilterName
     }
 
+    /// A repeating pattern color built from a seamless tile. Sizing the image in
+    /// points (pixels ÷ scale) maps one tile pixel to one physical pixel so the
+    /// grain stays crisp, and the pattern fills any rect it is painted into —
+    /// which is what makes the overlay cover the whole display.
+    static func tilePatternColor(for tile: TileImage, scale: CGFloat) -> NSColor {
+        let pointSize = NSSize(width: tile.size.width / max(scale, 1), height: tile.size.height / max(scale, 1))
+        let patternImage = NSImage(cgImage: tile.cgImage, size: pointSize)
+        return NSColor(patternImage: patternImage)
+    }
+
     override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
-        // Update contents scale when backing properties change (e.g., on external display)
-        if overlayLayer.contents != nil {
-            overlayLayer.contentsScale = window?.backingScaleFactor ?? 2.0
+        overlayLayer.contentsScale = window?.backingScaleFactor ?? 2.0
+        // Rebuild the pattern at the new display's density so it stays crisp.
+        if let tile = currentTile, overlayLayer.backgroundColor != nil {
+            let scale = window?.backingScaleFactor ?? 2.0
+            overlayLayer.backgroundColor = OverlayLayerView.tilePatternColor(for: tile, scale: scale).cgColor
         }
     }
 }

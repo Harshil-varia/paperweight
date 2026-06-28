@@ -14,6 +14,35 @@ struct PreferencesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Top header — app identity and a prominent, always-available Quit.
+            VStack(spacing: Theme.spacingS) {
+                Text("Paperweight")
+                    .font(Theme.monoFont(size: 15, weight: .bold))
+                    .foregroundColor(Theme.fg)
+
+                Button(action: { NSApp.terminate(nil) }) {
+                    HStack(spacing: Theme.spacingXS) {
+                        Image(systemName: "power")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Quit Paperweight")
+                            .font(Theme.monoFont(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(Theme.bg0)
+                    .padding(.vertical, Theme.spacingS)
+                    .padding(.horizontal, Theme.spacingL)
+                    .background(Theme.orange)
+                    .cornerRadius(Theme.cornerRadiusSmall)
+                }
+                .buttonStyle(.plain)
+                .help("Quit Paperweight")
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, Theme.spacingL)
+            .padding(.bottom, Theme.spacingM)
+
+            Divider()
+                .foregroundColor(Theme.bg2)
+
             // Tab picker
             Picker("Tab", selection: $selectedTab) {
                 ForEach(Tab.allCases, id: \.self) { tab in
@@ -78,12 +107,14 @@ struct GeneralTab: View {
                 Toggle("Launch at Login", isOn: Binding(
                     get: { coordinator.settings.launchAtLogin },
                     set: { newValue in
-                        coordinator.settings.launchAtLogin = newValue
+                        // Only persist the intent if the system registration
+                        // actually succeeded, so the toggle never shows "on"
+                        // while the app isn't really registered.
                         do {
                             try launchAtLoginService.setLaunchAtLogin(newValue)
+                            coordinator.settings.launchAtLogin = newValue
                         } catch {
-                            // Log error but don't crash; setting is persisted anyway
-                            NSLog("Failed to set launch at login: %@", error.localizedDescription)
+                            Log.lifecycle.error("Failed to set launch at login: \(String(describing: error))")
                         }
                     }
                 ))
@@ -160,12 +191,15 @@ struct GeneralTab: View {
                     .tracking(0.02)
 
                 VStack(alignment: .leading, spacing: Theme.spacingS) {
-                    ForEach(NSScreen.screens, id: \.self) { screen in
-                        let displayID = String(NSScreen.screens.firstIndex(of: screen) ?? 0)
+                    ForEach(Array(NSScreen.screens.enumerated()), id: \.element) { index, screen in
+                        // Key by the STABLE display ID, not the array index, so a
+                        // toggle always maps to the same physical monitor even if
+                        // displays are added/removed/reordered.
+                        let displayID = String(screen.displayID)
                         let displaySetting = coordinator.settings.perDisplay[displayID] ?? DisplaySetting()
 
                         HStack {
-                            Text("Display \((NSScreen.screens.firstIndex(of: screen) ?? 0) + 1)")
+                            Text("Display \(index + 1)")
                                 .font(Theme.monoFont(size: 11))
                                 .foregroundColor(Theme.fg4)
 
@@ -433,19 +467,169 @@ struct TextureInspector: View {
 // MARK: - ScheduleTab
 
 struct ScheduleTab: View {
+    @EnvironmentObject var coordinator: AppCoordinator
+
+    private enum Mode: Hashable { case off, manual, solar }
+
+    private var mode: Mode {
+        switch coordinator.settings.schedule {
+        case .off: return .off
+        case .manual: return .manual
+        case .solar: return .solar
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spacingL) {
             Text("Schedule")
                 .font(Theme.monoFont(size: 16, weight: .bold))
                 .foregroundColor(Theme.fg)
 
-            Text("Schedule support coming in Phase 4")
-                .font(Theme.monoFont(size: 12))
+            Text("Choose when the overlay is active. No location permission is required — solar mode computes sunrise and sunset from a latitude/longitude you enter.")
+                .font(Theme.monoFont(size: 11))
                 .foregroundColor(Theme.fg4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Picker("", selection: Binding(get: { mode }, set: { setMode($0) })) {
+                Text("Always on").tag(Mode.off)
+                Text("Time of day").tag(Mode.manual)
+                Text("Sunrise / Sunset").tag(Mode.solar)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            switch coordinator.settings.schedule {
+            case .off:
+                Text("The overlay follows the on/off toggle only.")
+                    .font(Theme.monoFont(size: 11))
+                    .foregroundColor(Theme.fg4)
+            case .manual:
+                manualEditor
+            case .solar:
+                solarEditor
+            }
 
             Spacer()
         }
     }
+
+    // MARK: Mode switching
+
+    private func setMode(_ newMode: Mode) {
+        switch newMode {
+        case .off:
+            update(.off)
+        case .manual:
+            if case .manual = coordinator.settings.schedule { return }
+            // Sensible default: on through the evening into the morning.
+            update(.manual(fromHour: 20, fromMinute: 0, toHour: 7, toMinute: 0))
+        case .solar:
+            if case .solar = coordinator.settings.schedule { return }
+            update(.solar(latitude: 37.7749, longitude: -122.4194))
+        }
+    }
+
+    private func update(_ schedule: ScheduleConfig) {
+        coordinator.settings.schedule = schedule
+    }
+
+    // MARK: Manual editor
+
+    @ViewBuilder
+    private var manualEditor: some View {
+        if case let .manual(fromHour, fromMinute, toHour, toMinute) = coordinator.settings.schedule {
+            VStack(alignment: .leading, spacing: Theme.spacingM) {
+                HStack {
+                    Text("On from")
+                        .font(Theme.monoFont(size: 12))
+                        .foregroundColor(Theme.fg2)
+                        .frame(width: 70, alignment: .leading)
+                    DatePicker("", selection: timeBinding(hour: fromHour, minute: fromMinute) { h, m in
+                        // Read the sibling "to" fields fresh so a rapid edit of
+                        // both fields can't write a stale value.
+                        guard case let .manual(_, _, th, tm) = coordinator.settings.schedule else { return }
+                        update(.manual(fromHour: h, fromMinute: m, toHour: th, toMinute: tm))
+                    }, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                }
+                HStack {
+                    Text("Off at")
+                        .font(Theme.monoFont(size: 12))
+                        .foregroundColor(Theme.fg2)
+                        .frame(width: 70, alignment: .leading)
+                    DatePicker("", selection: timeBinding(hour: toHour, minute: toMinute) { h, m in
+                        guard case let .manual(fh, fm, _, _) = coordinator.settings.schedule else { return }
+                        update(.manual(fromHour: fh, fromMinute: fm, toHour: h, toMinute: m))
+                    }, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                }
+                Text("Overnight windows are fine — e.g. 20:00 to 07:00.")
+                    .font(Theme.monoFont(size: 10))
+                    .foregroundColor(Theme.fg4)
+            }
+        }
+    }
+
+    private func timeBinding(hour: Int, minute: Int, set: @escaping (Int, Int) -> Void) -> Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: max(0, min(23, hour)),
+                                      minute: max(0, min(59, minute)),
+                                      second: 0, of: Date()) ?? Date()
+            },
+            set: { newDate in
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                set(comps.hour ?? 0, comps.minute ?? 0)
+            }
+        )
+    }
+
+    // MARK: Solar editor
+
+    @ViewBuilder
+    private var solarEditor: some View {
+        if case let .solar(latitude, longitude) = coordinator.settings.schedule {
+            VStack(alignment: .leading, spacing: Theme.spacingM) {
+                HStack {
+                    Text("Latitude")
+                        .font(Theme.monoFont(size: 12))
+                        .foregroundColor(Theme.fg2)
+                        .frame(width: 80, alignment: .leading)
+                    TextField("", value: Binding(
+                        get: { latitude },
+                        set: { newLat in
+                            guard case let .solar(_, lon) = coordinator.settings.schedule else { return }
+                            update(.solar(latitude: clampLatitude(newLat), longitude: lon))
+                        }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+                }
+                HStack {
+                    Text("Longitude")
+                        .font(Theme.monoFont(size: 12))
+                        .foregroundColor(Theme.fg2)
+                        .frame(width: 80, alignment: .leading)
+                    TextField("", value: Binding(
+                        get: { longitude },
+                        set: { newLon in
+                            guard case let .solar(lat, _) = coordinator.settings.schedule else { return }
+                            update(.solar(latitude: lat, longitude: clampLongitude(newLon)))
+                        }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+                }
+                Text("The overlay is active between sunrise and sunset for this location.")
+                    .font(Theme.monoFont(size: 10))
+                    .foregroundColor(Theme.fg4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func clampLatitude(_ value: Double) -> Double { max(-90, min(90, value)) }
+    private func clampLongitude(_ value: Double) -> Double { max(-180, min(180, value)) }
 }
 
 // MARK: - ExclusionsTab

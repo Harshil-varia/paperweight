@@ -71,9 +71,12 @@ class SnoozeTimer {
 // MARK: - AppCoordinator extension
 
 extension AppCoordinator {
-    /// Update the snooze state
+    /// Update the snooze state. The snooze timer fires on a background queue, so
+    /// hop to main before touching @Published state (the didSet on
+    /// `inputSnoozedUntil` runs recompute()).
     func update(snoozedUntil: Date?) {
-        inputSnoozedUntil = snoozedUntil
-        recompute()
+        AppCoordinator.runOnMain { [weak self] in
+            self?.inputSnoozedUntil = snoozedUntil
+        }
     }
 }
