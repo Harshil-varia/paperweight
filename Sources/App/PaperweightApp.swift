@@ -7,7 +7,7 @@ struct PaperweightApp: App {
     @State private var showOnboarding = false
 
     var body: some Scene {
-        MenuBarExtra("Paperweight", systemImage: "circle.fill") {
+        MenuBarExtra("Paperweight", image: "MenuBarGlyph") {
             MenuBarPanel()
                 .environmentObject(appDelegate.coordinator)
         }

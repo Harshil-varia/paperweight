@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Paperweight app icon (source of truth).
+  Concept: a warm paper "sheet" squircle carrying the app's own fine grain and a
+  soft glare-reducing vignette, with a smooth charcoal weight resting on it.
+  Render to PNGs with scripts/generate-icon.sh (rsvg-convert).
+-->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Warm paper gradient (gruvbox-leaning cream) -->
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#f6eedb"/>
+      <stop offset="0.55" stop-color="#efe2c2"/>
+      <stop offset="1"   stop-color="#e6d4a8"/>
+    </linearGradient>
+
+    <!-- Soft top sheen on the sheet -->
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#ffffff" stop-opacity="0.45"/>
+      <stop offset="0.35" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- The matte / glare-reduction vignette: clear center, gently dark edges -->
+    <radialGradient id="vignette" cx="0.5" cy="0.46" r="0.72">
+      <stop offset="0"    stop-color="#2a211c" stop-opacity="0"/>
+      <stop offset="0.78" stop-color="#2a211c" stop-opacity="0"/>
+      <stop offset="1"    stop-color="#2a211c" stop-opacity="0.22"/>
+    </radialGradient>
+
+    <!-- The weight: a smooth dome of charcoal with a warm rim -->
+    <radialGradient id="weight" cx="0.40" cy="0.34" r="0.78">
+      <stop offset="0"    stop-color="#6b635b"/>
+      <stop offset="0.45" stop-color="#3c3836"/>
+      <stop offset="1"    stop-color="#1d2021"/>
+    </radialGradient>
+    <radialGradient id="rim" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.88" stop-color="#fabd2d" stop-opacity="0"/>
+      <stop offset="0.985" stop-color="#fabd2d" stop-opacity="0.30"/>
+      <stop offset="1"    stop-color="#fabd2d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="spec" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0"   stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="1"   stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="contact" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0"   stop-color="#1d2021" stop-opacity="0.40"/>
+      <stop offset="1"   stop-color="#1d2021" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Fine procedural grain — the very effect Paperweight composites -->
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" stitchTiles="stitch" result="noise"/>
+      <feColorMatrix in="noise" type="matrix"
+        values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="alpha"/>
+      <feComponentTransfer in="alpha" result="grain">
+        <feFuncA type="linear" slope="0.14"/>
+      </feComponentTransfer>
+      <feComposite in="grain" in2="SourceGraphic" operator="in"/>
+    </filter>
+
+    <!-- Squircle clip for overlays -->
+    <clipPath id="squircle">
+      <rect x="96" y="96" width="832" height="832" rx="190" ry="190"/>
+    </clipPath>
+  </defs>
+
+  <!-- Paper sheet -->
+  <rect x="96" y="96" width="832" height="832" rx="190" ry="190" fill="url(#paper)"/>
+  <rect x="96" y="96" width="832" height="832" rx="190" ry="190" fill="url(#sheen)"/>
+
+  <!-- Grain over the sheet -->
+  <g clip-path="url(#squircle)">
+    <rect x="96" y="96" width="832" height="832" fill="#000000" filter="url(#grain)"/>
+    <!-- Glare-reduction vignette -->
+    <rect x="96" y="96" width="832" height="832" fill="url(#vignette)"/>
+  </g>
+
+  <!-- Contact shadow under the weight -->
+  <ellipse cx="512" cy="690" rx="232" ry="58" fill="url(#contact)"/>
+
+  <!-- The weight -->
+  <circle cx="512" cy="500" r="214" fill="url(#weight)"/>
+  <circle cx="512" cy="500" r="214" fill="url(#rim)"/>
+  <!-- Specular highlight -->
+  <ellipse cx="438" cy="416" rx="92" ry="62" fill="url(#spec)" transform="rotate(-28 438 416)"/>
+
+  <!-- Crisp inner edge on the sheet -->
+  <rect x="96.5" y="96.5" width="831" height="831" rx="189.5" ry="189.5" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.5"/>
+</svg>
