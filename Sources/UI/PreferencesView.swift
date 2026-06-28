@@ -465,19 +465,159 @@ struct TextureInspector: View {
 // MARK: - ScheduleTab
 
 struct ScheduleTab: View {
+    @EnvironmentObject var coordinator: AppCoordinator
+
+    private enum Mode: Hashable { case off, manual, solar }
+
+    private var mode: Mode {
+        switch coordinator.settings.schedule {
+        case .off: return .off
+        case .manual: return .manual
+        case .solar: return .solar
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spacingL) {
             Text("Schedule")
                 .font(Theme.monoFont(size: 16, weight: .bold))
                 .foregroundColor(Theme.fg)
 
-            Text("Schedule support coming in Phase 4")
-                .font(Theme.monoFont(size: 12))
+            Text("Choose when the overlay is active. No location permission is required — solar mode computes sunrise and sunset from a latitude/longitude you enter.")
+                .font(Theme.monoFont(size: 11))
                 .foregroundColor(Theme.fg4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Picker("", selection: Binding(get: { mode }, set: { setMode($0) })) {
+                Text("Always on").tag(Mode.off)
+                Text("Time of day").tag(Mode.manual)
+                Text("Sunrise / Sunset").tag(Mode.solar)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            switch coordinator.settings.schedule {
+            case .off:
+                Text("The overlay follows the on/off toggle only.")
+                    .font(Theme.monoFont(size: 11))
+                    .foregroundColor(Theme.fg4)
+            case .manual:
+                manualEditor
+            case .solar:
+                solarEditor
+            }
 
             Spacer()
         }
     }
+
+    // MARK: Mode switching
+
+    private func setMode(_ newMode: Mode) {
+        switch newMode {
+        case .off:
+            update(.off)
+        case .manual:
+            if case .manual = coordinator.settings.schedule { return }
+            // Sensible default: on through the evening into the morning.
+            update(.manual(fromHour: 20, fromMinute: 0, toHour: 7, toMinute: 0))
+        case .solar:
+            if case .solar = coordinator.settings.schedule { return }
+            update(.solar(latitude: 37.7749, longitude: -122.4194))
+        }
+    }
+
+    private func update(_ schedule: ScheduleConfig) {
+        coordinator.settings.schedule = schedule
+    }
+
+    // MARK: Manual editor
+
+    @ViewBuilder
+    private var manualEditor: some View {
+        if case let .manual(fromHour, fromMinute, toHour, toMinute) = coordinator.settings.schedule {
+            VStack(alignment: .leading, spacing: Theme.spacingM) {
+                HStack {
+                    Text("On from")
+                        .font(Theme.monoFont(size: 12))
+                        .foregroundColor(Theme.fg2)
+                        .frame(width: 70, alignment: .leading)
+                    DatePicker("", selection: timeBinding(hour: fromHour, minute: fromMinute) { h, m in
+                        update(.manual(fromHour: h, fromMinute: m, toHour: toHour, toMinute: toMinute))
+                    }, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                }
+                HStack {
+                    Text("Off at")
+                        .font(Theme.monoFont(size: 12))
+                        .foregroundColor(Theme.fg2)
+                        .frame(width: 70, alignment: .leading)
+                    DatePicker("", selection: timeBinding(hour: toHour, minute: toMinute) { h, m in
+                        update(.manual(fromHour: fromHour, fromMinute: fromMinute, toHour: h, toMinute: m))
+                    }, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                }
+                Text("Overnight windows are fine — e.g. 20:00 to 07:00.")
+                    .font(Theme.monoFont(size: 10))
+                    .foregroundColor(Theme.fg4)
+            }
+        }
+    }
+
+    private func timeBinding(hour: Int, minute: Int, set: @escaping (Int, Int) -> Void) -> Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: max(0, min(23, hour)),
+                                      minute: max(0, min(59, minute)),
+                                      second: 0, of: Date()) ?? Date()
+            },
+            set: { newDate in
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                set(comps.hour ?? 0, comps.minute ?? 0)
+            }
+        )
+    }
+
+    // MARK: Solar editor
+
+    @ViewBuilder
+    private var solarEditor: some View {
+        if case let .solar(latitude, longitude) = coordinator.settings.schedule {
+            VStack(alignment: .leading, spacing: Theme.spacingM) {
+                HStack {
+                    Text("Latitude")
+                        .font(Theme.monoFont(size: 12))
+                        .foregroundColor(Theme.fg2)
+                        .frame(width: 80, alignment: .leading)
+                    TextField("", value: Binding(
+                        get: { latitude },
+                        set: { update(.solar(latitude: clampLatitude($0), longitude: longitude)) }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+                }
+                HStack {
+                    Text("Longitude")
+                        .font(Theme.monoFont(size: 12))
+                        .foregroundColor(Theme.fg2)
+                        .frame(width: 80, alignment: .leading)
+                    TextField("", value: Binding(
+                        get: { longitude },
+                        set: { update(.solar(latitude: latitude, longitude: clampLongitude($0))) }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+                }
+                Text("The overlay is active between sunrise and sunset for this location.")
+                    .font(Theme.monoFont(size: 10))
+                    .foregroundColor(Theme.fg4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func clampLatitude(_ value: Double) -> Double { max(-90, min(90, value)) }
+    private func clampLongitude(_ value: Double) -> Double { max(-180, min(180, value)) }
 }
 
 // MARK: - ExclusionsTab
