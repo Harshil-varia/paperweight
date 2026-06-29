@@ -35,7 +35,7 @@ targets:
     info:
       path: Sources/App/Info.plist
       properties:
-        CFBundleShortVersionString: "0.1"
+        CFBundleShortVersionString: "0.1.0"
 
   PaperweightTests:
     type: bundle.unit-test
